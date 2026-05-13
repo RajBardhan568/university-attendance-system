@@ -108,7 +108,6 @@ const TeacherDash = ({ teacherId }) => {
     try {
       const res = await axios.get(
         `https://university-attendance-system-rqyy.onrender.com/api/teacher/search-student/${searchQuery}`,
-        
       );
       setSearchResult(res.data);
     } catch (err) {
@@ -120,7 +119,10 @@ const TeacherDash = ({ teacherId }) => {
   const handleUpdateProfile = async () => {
     try {
       // Assuming you have an update route: /api/auth/update
-      await axios.put(`https://university-attendance-system-rqyy.onrender.com/api/auth/update/${user._id}`, user);
+      await axios.put(
+        `https://university-attendance-system-rqyy.onrender.com/api/auth/update/${user._id}`,
+        user,
+      );
       localStorage.setItem("user", JSON.stringify(user));
       setIsEditing(false);
       alert("Profile Updated Successfully!");
@@ -184,10 +186,7 @@ const TeacherDash = ({ teacherId }) => {
   const downloadReport = async (subject, format) => {
     try {
       const res = await axios.get(
-        `https://university-attendance-system-rqyy.onrender.com/api/teacher/subject-stats/${subject._id}`
-        
-        
-        ,
+        `https://university-attendance-system-rqyy.onrender.com/api/teacher/subject-stats/${subject._id}`,
       );
       const data = res.data;
 
@@ -448,6 +447,7 @@ const TeacherDash = ({ teacherId }) => {
               </div>
 
               {/* CARDS - Spans 8 cols, Responsive grid inside */}
+              {/* CARDS - Spans 8 cols, Responsive grid inside */}
               <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                 {subjects.map((sub) => (
                   <div
@@ -458,7 +458,7 @@ const TeacherDash = ({ teacherId }) => {
                       <div className="bg-indigo-50 p-3 rounded-2xl text-indigo-600">
                         <BookOpen size={20} />
                       </div>
-                      {/* delete logic */}
+                      {/* DELETE LOGIC */}
                       <button
                         onClick={async () => {
                           if (window.confirm("Delete this subject?")) {
@@ -479,12 +479,14 @@ const TeacherDash = ({ teacherId }) => {
                         <Trash2 size={18} />
                       </button>
                     </div>
+
                     <h3 className="text-xl font-black text-slate-800">
                       {sub.subjectName}
                     </h3>
                     <p className="text-sm font-bold text-slate-400 mb-4">
                       {sub.branch} • Sem {sub.semester}
                     </p>
+
                     <div className="bg-slate-50 p-4 rounded-3xl text-center mb-6">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                         Active Code
@@ -492,9 +494,10 @@ const TeacherDash = ({ teacherId }) => {
                       <p className="text-3xl font-black text-indigo-600">
                         {sub.activeCode || "---"}
                       </p>
+
                       {/* REAL-TIME ATTENDANCE COUNTERS */}
-                      <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 text-center">
+                      <div className="grid grid-cols-2 gap-3 mt-4">
+                        <div className="bg-white p-3 rounded-2xl border border-slate-100 text-center">
                           <p className="text-[9px] font-black text-slate-400 uppercase mb-1">
                             Total Held
                           </p>
@@ -519,11 +522,13 @@ const TeacherDash = ({ teacherId }) => {
                         <Timer expiresAt={sub.codeExpiresAt} />
                       )}
                     </div>
-                    <div className="flex gap-2 mb-3">
+
+                    {/* CODE GENERATION CONTROLS */}
+                    <div className="flex gap-2 mb-6">
                       <input
                         type="number"
                         placeholder="Qty"
-                        className="w-16 bg-slate-50 rounded-xl text-center font-bold"
+                        className="w-16 bg-slate-50 rounded-xl text-center font-bold outline-none"
                         value={manualIncrements[sub._id] || ""}
                         onChange={(e) =>
                           setManualIncrements({
@@ -532,12 +537,9 @@ const TeacherDash = ({ teacherId }) => {
                           })
                         }
                       />
-                      {/* TIME DROPDOWN */}
                       <select
                         className="bg-slate-50 p-2 rounded-xl text-[10px] font-bold border border-slate-100 outline-none"
-                        // 1. Link to state
                         value={selectedTime[sub._id] || "5"}
-                        // 2. Update state when changed
                         onChange={(e) =>
                           setSelectedTime({
                             ...selectedTime,
@@ -550,56 +552,34 @@ const TeacherDash = ({ teacherId }) => {
                         <option value="10">10 min</option>
                       </select>
 
-                      {/* RANGE DROPDOWN */}
-                      <select
-                        className="bg-slate-50 p-2 rounded-xl text-[10px] font-bold border border-slate-100 outline-none"
-                        // 1. Link to state
-                        value={selectedRange[sub._id] || "20"}
-                        // 2. Update state when changed
-                        onChange={(e) =>
-                          setSelectedRange({
-                            ...selectedRange,
-                            [sub._id]: e.target.value,
-                          })
-                        }
-                      >
-                        <option value="10">10m</option>
-                        <option value="20">20m</option>
-                        <option value="50">50m</option>
-                      </select>
-
                       <button
                         onClick={() => generateCode(sub._id)}
-                        className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold"
+                        className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all"
                       >
                         Generate
                       </button>
                     </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-  {subjects.map((subject) => (
-    <div key={subject._id} className="bg-white p-6 rounded-[2rem] shadow-xl border border-slate-100">
-      {/* ... Subject Name and Code Display ... */}
 
-      <div className="mt-6 pt-6 border-t border-slate-100">
-        <p className="text-[10px] font-black text-slate-400 uppercase mb-3">Export Data</p>
-        <div className="flex gap-3">
-          <button 
-            onClick={() => downloadReport(subject, 'pdf')}
-            className="flex-1 bg-indigo-600/10 text-indigo-600 py-3 rounded-xl font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-2"
-          >
-            Download PDF
-          </button>
-          <button 
-            onClick={() => downloadReport(subject, 'xlsx')}
-            className="flex-1 bg-emerald-600/10 text-emerald-600 py-3 rounded-xl font-bold text-xs hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-2"
-          >
-            Download Excel
-          </button>
-        </div>
-      </div>
-    </div>
-  ))}
-</div>
+                    {/* UPDATE: EXPORT DATA SECTION (Merged inside the loop, using 'sub') */}
+                    <div className="mt-6 pt-6 border-t border-slate-100">
+                      <p className="text-[10px] font-black text-slate-400 uppercase mb-3">
+                        Export Data
+                      </p>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => downloadReport(sub, "pdf")} // Changed 'subject' to 'sub'
+                          className="flex-1 bg-indigo-600/10 text-indigo-600 py-3 rounded-xl font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-2"
+                        >
+                          Download PDF
+                        </button>
+                        <button
+                          onClick={() => downloadReport(sub, "xlsx")} // Changed 'subject' to 'sub'
+                          className="flex-1 bg-emerald-600/10 text-emerald-600 py-3 rounded-xl font-bold text-xs hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-2"
+                        >
+                          Download Excel
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
