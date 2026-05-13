@@ -575,26 +575,31 @@ const TeacherDash = ({ teacherId }) => {
                         Generate
                       </button>
                     </div>
-          {subjects.map((item) => ( // Use 'item' or 'subject' here
-  <div key={item._id}>
-    <h3>{item.subjectName}</h3>
-    
-    {/* Ensure 'item' is passed to the function here */}
-    <button 
-      onClick={() => downloadReport(item, 'pdf')} 
-      className="bg-indigo-600 text-white p-2 rounded"
-    >
-      Download PDF
-    </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+  {subjects.map((subject) => (
+    <div key={subject._id} className="bg-white p-6 rounded-[2rem] shadow-xl border border-slate-100">
+      {/* ... Subject Name and Code Display ... */}
 
-    <button 
-      onClick={() => downloadReport(item, 'xlsx')} 
-      className="bg-green-600 text-white p-2 rounded ml-2"
-    >
-      Download Excel
-    </button>
-  </div>
-))}
+      <div className="mt-6 pt-6 border-t border-slate-100">
+        <p className="text-[10px] font-black text-slate-400 uppercase mb-3">Export Data</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={() => downloadReport(subject, 'pdf')}
+            className="flex-1 bg-indigo-600/10 text-indigo-600 py-3 rounded-xl font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-2"
+          >
+            Download PDF
+          </button>
+          <button 
+            onClick={() => downloadReport(subject, 'xlsx')}
+            className="flex-1 bg-emerald-600/10 text-emerald-600 py-3 rounded-xl font-bold text-xs hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-2"
+          >
+            Download Excel
+          </button>
+        </div>
+      </div>
+    </div>
+  ))}
+</div>
                   </div>
                 ))}
               </div>
