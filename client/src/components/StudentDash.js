@@ -12,6 +12,7 @@ import {
   X,
   Camera,
   BookOpen,
+  ShieldCheck,
 } from "lucide-react";
 
 const StudentDash = () => {
@@ -198,9 +199,11 @@ const handleProfileUpdate = async () => {
                   Enter 6-digit code shared in class
                 </p>
               </div>
+
+              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 mb-12 border-2 border-dashed border-indigo-200 flex flex-col md:flex-row items-center gap-6 w-full">
               <div className="flex w-full md:w-auto gap-3">
                 <input
-                  className="flex-1 md:w-48 p-4 border-2 border-slate-100 rounded-2xl text-center text-2xl font-black tracking-widest focus:border-indigo-500 outline-none uppercase placeholder:text-slate-200"
+                  className="w-full text-center tracking-[0.5em] text-2xl font-black py-4 bg-slate-50 border-2 border-transparent rounded-2xl outline-none focus:border-indigo-500 focus:bg-white transition-all text-slate-700"
                   placeholder="XXXXXX"
                   maxLength={6}
                   value={inputCode}
@@ -209,9 +212,10 @@ const handleProfileUpdate = async () => {
                 <button
                   onClick={markAttendance}
                  className="w-full md:w-1/3 bg-indigo-600 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
-                  <CheckCircle size={20} /> Submit
+                  <ShieldCheck size={20} /> Submit
                 </button>
               </div>
+            </div>
             </div>
 
             <h2 className="text-2xl font-black text-slate-800 mb-8 flex items-center gap-3">
