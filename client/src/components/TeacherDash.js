@@ -537,6 +537,7 @@ const TeacherDash = ({ teacherId }) => {
                           })
                         }
                       />
+                      {/* TIME DROPDOWN */}
                       <select
                         className="bg-slate-50 p-2 rounded-xl text-[10px] font-bold border border-slate-100 outline-none"
                         value={selectedTime[sub._id] || "5"}
@@ -551,7 +552,25 @@ const TeacherDash = ({ teacherId }) => {
                         <option value="5">5 min</option>
                         <option value="10">10 min</option>
                       </select>
+                      {/* RANGE DROPDOWN */}
+                      <select
+                        className="bg-slate-50 p-2 rounded-xl text-[10px] font-bold border border-slate-100 outline-none"
+                        // 1. Link to state
 
+                        value={selectedRange[sub._id] || "20"}
+                        // 2. Update state when changed
+
+                        onChange={(e) =>
+                          setSelectedRange({
+                            ...selectedRange,
+
+                            [sub._id]: e.target.value,
+                          })
+                        } >
+                        <option value="10">10m</option>
+                        <option value="20">20m</option>
+                        <option value="50">50m</option>
+                      </select>
                       <button
                         onClick={() => generateCode(sub._id)}
                         className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all"

@@ -101,8 +101,8 @@ const StudentDash = () => {
 
       // NEW: Save the URL to MongoDB immediately
       const dbRes = await axios.put(
-          // `http://localhost:5000/api/student/update-profile/${regNo}`,
-          `https://university-attendance-system-rqyy.onrender.com/api/student/update-profile/${regNo}`,
+        // `http://localhost:5000/api/student/update-profile/${regNo}`,
+        `https://university-attendance-system-rqyy.onrender.com/api/student/update-profile/${regNo}`,
         {
           ...user,
           profilePhoto: imageUrl,
@@ -122,26 +122,28 @@ const StudentDash = () => {
   };
 
   // 2. FIXED PROFILE TEXT UPDATE
-const handleProfileUpdate = async () => {
+  const handleProfileUpdate = async () => {
     try {
-        const res = await axios.put(`https://university-attendance-system-rqyy.onrender.com/api/student/update-profile/${regNo}`
-          , {
-            name: user.name,
-            mobile: user.mobile,
-            profilePhoto: user.profilePhoto
-        });
+      const res = await axios.put(
+        `https://university-attendance-system-rqyy.onrender.com/api/student/update-profile/${regNo}`,
+        {
+          name: user.name,
+          mobile: user.mobile,
+          profilePhoto: user.profilePhoto,
+        },
+      );
 
-        // Update local state and storage with the fresh data from DB
-        setUser(res.data.user);
-        localStorage.setItem('user', JSON.stringify(res.data.user));
-        
-        setIsEditing(false);
-        alert(res.data.message);
+      // Update local state and storage with the fresh data from DB
+      setUser(res.data.user);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+
+      setIsEditing(false);
+      alert(res.data.message);
     } catch (err) {
-        console.error(err);
-        alert("Update failed. Make sure the server is running.");
+      console.error(err);
+      alert("Update failed. Make sure the server is running.");
     }
-};
+  };
 
   const handleLogout = () => {
     localStorage.clear();
@@ -189,33 +191,39 @@ const handleProfileUpdate = async () => {
 
         {view === "dashboard" ? (
           <div className="animate-in fade-in duration-700">
-            {/* MARK ATTENDANCE BOX */}
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 mb-12 border-2 border-dashed border-indigo-200 flex flex-col md:flex-row items-center gap-6">
-              <div className="flex-1 text-center md:text-left">
-                <h3 className="text-xl font-bold text-indigo-900 flex items-center justify-center md:justify-start gap-2 mb-1">
-                  <PlusCircle className="text-indigo-600" /> Mark Presence
+            {/* MARK ATTENDANCE BOX - Cleaned and Responsive */}
+            <div className="bg-white p-8 md:p-12 rounded-[3rem] shadow-xl shadow-slate-200/50 mb-12 border-2 border-dashed border-indigo-200 flex flex-col items-center text-center">
+              {/* Header Section */}
+              <div className="mb-8">
+                <h3 className="text-2xl font-black text-indigo-900 flex items-center justify-center gap-3 mb-2">
+                  <PlusCircle className="text-indigo-600" size={28} /> Mark
+                  Presence
                 </h3>
-                <p className="text-slate-400 text-sm font-medium italic">
-                  Enter 6-digit code shared in class
+                <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">
+                  Enter the 6-digit session code shared by your teacher
                 </p>
               </div>
 
-              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 mb-12 border-2 border-dashed border-indigo-200 flex flex-col md:flex-row items-center gap-6 w-full">
-              <div className="flex w-full md:w-auto gap-3">
-                <input
-                  className="w-full text-center tracking-[0.5em] text-2xl font-black py-4 bg-slate-50 border-2 border-transparent rounded-2xl outline-none focus:border-indigo-500 focus:bg-white transition-all text-slate-700"
-                  placeholder="XXXXXX"
-                  maxLength={6}
-                  value={inputCode}
-                  onChange={(e) => setInputCode(e.target.value.toUpperCase())}
-                />
+              {/* Input & Button Container - Now stacked vertically */}
+              <div className="w-full max-w-md space-y-4">
+                <div className="relative">
+                  <input
+                    className="w-full text-center tracking-[0.6em] text-3xl font-black py-6 bg-slate-50 border-2 border-transparent rounded-[2rem] outline-none focus:border-indigo-500 focus:bg-white transition-all text-indigo-600 placeholder:text-slate-200"
+                    placeholder="XXXXXX"
+                    maxLength={6}
+                    value={inputCode}
+                    onChange={(e) => setInputCode(e.target.value.toUpperCase())}
+                  />
+                </div>
+
+                {/* Submit Button - Positioned clearly below */}
                 <button
                   onClick={markAttendance}
-                 className="w-full md:w-1/3 bg-indigo-600 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
-                  <ShieldCheck size={20} /> Submit
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-[2rem] font-black text-lg shadow-xl shadow-indigo-100 active:scale-95 transition-all flex items-center justify-center gap-3"
+                >
+                  <ShieldCheck size={24} /> Submit Attendance
                 </button>
               </div>
-            </div>
             </div>
 
             <h2 className="text-2xl font-black text-slate-800 mb-8 flex items-center gap-3">
@@ -305,82 +313,123 @@ const handleProfileUpdate = async () => {
           </div>
         ) : (
           /* PROFILE VIEW */
-       /* PROFILE VIEW */
-<div className="max-w-xl mx-auto bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100 text-center animate-in zoom-in duration-500">
-    <div className="relative w-36 h-36 mx-auto mb-8">
-        <div className="w-full h-full bg-indigo-50 rounded-[2.5rem] flex items-center justify-center text-indigo-600 text-5xl font-black overflow-hidden border-4 border-white shadow-xl">
-            {uploading ? (
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
-            ) : user.profilePhoto ? (
-                <img src={user.profilePhoto} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-                user.name?.charAt(0)
-            )}
-        </div>
-        {/* Hidden File Input for Photo */}
-        <input type="file" id="profilePic" className="hidden" onChange={handleImageUpload} accept="image/*" />
-        <label htmlFor="profilePic" className="absolute -bottom-2 -right-2 bg-indigo-600 p-3 rounded-2xl shadow-lg text-white hover:scale-110 transition-transform cursor-pointer border-4 border-white">
-            <Camera size={20} />
-        </label>
-    </div>
-
-    <div className="space-y-6 text-center">
-        {isEditing ? (
-            <div className="space-y-4 text-left">
-                <div>
-                    <label className="text-[10px] font-black text-slate-400 ml-2 uppercase">Full Name</label>
-                    <input 
-                        className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold" 
-                        value={user.name} 
-                        onChange={e => setUser({...user, name: e.target.value})}
-                    />
-                </div>
-                <div>
-                    <label className="text-[10px] font-black text-slate-400 ml-2 uppercase">Mobile Number</label>
-                    <input 
-                        className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold" 
-                        value={user.mobile} 
-                        onChange={e => setUser({...user, mobile: e.target.value})}
-                    />
-                </div>
-                <div className="flex gap-3">
-                    <button onClick={handleProfileUpdate} className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-indigo-100">
-                        <Save size={20} /> Save Changes
-                    </button>
-                    <button onClick={() => setIsEditing(false)} className="px-6 bg-slate-100 text-slate-500 py-4 rounded-2xl font-bold">
-                        Cancel
-                    </button>
-                </div>
+          /* PROFILE VIEW */
+          <div className="max-w-xl mx-auto bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100 text-center animate-in zoom-in duration-500">
+            <div className="relative w-36 h-36 mx-auto mb-8">
+              <div className="w-full h-full bg-indigo-50 rounded-[2.5rem] flex items-center justify-center text-indigo-600 text-5xl font-black overflow-hidden border-4 border-white shadow-xl">
+                {uploading ? (
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+                ) : user.profilePhoto ? (
+                  <img
+                    src={user.profilePhoto}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  user.name?.charAt(0)
+                )}
+              </div>
+              {/* Hidden File Input for Photo */}
+              <input
+                type="file"
+                id="profilePic"
+                className="hidden"
+                onChange={handleImageUpload}
+                accept="image/*"
+              />
+              <label
+                htmlFor="profilePic"
+                className="absolute -bottom-2 -right-2 bg-indigo-600 p-3 rounded-2xl shadow-lg text-white hover:scale-110 transition-transform cursor-pointer border-4 border-white"
+              >
+                <Camera size={20} />
+              </label>
             </div>
-        ) : (
-            <>
-                <div>
-                    <h2 className="text-3xl font-black text-slate-900">{user.name}</h2>
-                    <p className="text-indigo-600 font-bold uppercase tracking-[0.2em] text-[10px] mt-1">Reg No: {regNo}</p>
-                </div>
 
-                <div className="bg-slate-50 p-6 rounded-[2rem] text-left space-y-5 border border-slate-100">
+            <div className="space-y-6 text-center">
+              {isEditing ? (
+                <div className="space-y-4 text-left">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 ml-2 uppercase">
+                      Full Name
+                    </label>
+                    <input
+                      className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
+                      value={user.name}
+                      onChange={(e) =>
+                        setUser({ ...user, name: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 ml-2 uppercase">
+                      Mobile Number
+                    </label>
+                    <input
+                      className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
+                      value={user.mobile}
+                      onChange={(e) =>
+                        setUser({ ...user, mobile: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleProfileUpdate}
+                      className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-indigo-100"
+                    >
+                      <Save size={20} /> Save Changes
+                    </button>
+                    <button
+                      onClick={() => setIsEditing(false)}
+                      className="px-6 bg-slate-100 text-slate-500 py-4 rounded-2xl font-bold"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <h2 className="text-3xl font-black text-slate-900">
+                      {user.name}
+                    </h2>
+                    <p className="text-indigo-600 font-bold uppercase tracking-[0.2em] text-[10px] mt-1">
+                      Reg No: {regNo}
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-50 p-6 rounded-[2rem] text-left space-y-5 border border-slate-100">
                     <div className="flex justify-between items-center">
-                        <span className="text-slate-400 font-bold text-xs uppercase tracking-widest">Email Address</span>
-                        <span className="font-black text-slate-500 italic text-sm">{user.email}</span>
+                      <span className="text-slate-400 font-bold text-xs uppercase tracking-widest">
+                        Email Address
+                      </span>
+                      <span className="font-black text-slate-500 italic text-sm">
+                        {user.email}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center">
-                        <span className="text-slate-400 font-bold text-xs uppercase tracking-widest">Mobile</span>
-                        <span className="font-black text-slate-800">{user.mobile || "Not Provided"}</span>
+                      <span className="text-slate-400 font-bold text-xs uppercase tracking-widest">
+                        Mobile
+                      </span>
+                      <span className="font-black text-slate-800">
+                        {user.mobile || "Not Provided"}
+                      </span>
                     </div>
-                </div>
+                  </div>
 
-                <button 
+                  <button
                     onClick={() => setIsEditing(true)}
                     className="w-full flex items-center justify-center gap-2 py-4 text-indigo-600 font-bold bg-indigo-50 rounded-2xl hover:bg-indigo-100 transition-all"
-                >
+                  >
                     <Edit3 size={18} /> Edit Profile Details
-                </button>
-            </>
-        )}
-        <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest pt-4">Administrative records are managed by the faculty.</p>
-    </div>
-</div>
+                  </button>
+                </>
+              )}
+              <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest pt-4">
+                Administrative records are managed by the faculty.
+              </p>
+            </div>
+          </div>
         )}
       </div>
     </div>
