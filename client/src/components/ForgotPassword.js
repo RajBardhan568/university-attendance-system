@@ -12,7 +12,8 @@ const ForgotPassword = () => {
   const handleSendOtp = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://localhost:5000/api/auth/forgot-password", { email });
+      await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/forgot-password",
+         { email });
       alert("OTP sent to your email!");
       setStep(2);
     } catch (err) {
@@ -25,7 +26,7 @@ const ForgotPassword = () => {
     if (newPassword !== confirmPassword) return alert("Passwords do not match!");
     
     try {
-      await axios.post("http://localhost:5000/api/auth/reset-password-otp", { 
+      await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/reset-password-otp", { 
         email, 
         otp, 
         newPassword 

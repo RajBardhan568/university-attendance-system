@@ -33,7 +33,7 @@ const StudentDash = () => {
     if (!regNo) return;
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/student/my-stats/${regNo}`,
+        `https://university-attendance-system-rqyy.onrender.com/api/student/my-stats/${regNo}`,
       );
       setAttendanceData(res.data);
     } catch (err) {
@@ -57,7 +57,7 @@ const StudentDash = () => {
         const { latitude, longitude } = position.coords;
         try {
           const res = await axios.post(
-            "http://localhost:5000/api/student/mark-attendance",
+            "https://university-attendance-system-rqyy.onrender.com/api/student/mark-attendance",
             {
               regNo,
               code: inputCode.trim().toUpperCase(),
@@ -100,7 +100,8 @@ const StudentDash = () => {
 
       // NEW: Save the URL to MongoDB immediately
       const dbRes = await axios.put(
-        `http://localhost:5000/api/student/update-profile/${regNo}`,
+          // `http://localhost:5000/api/student/update-profile/${regNo}`,
+          `https://university-attendance-system-rqyy.onrender.com/api/student/update-profile/${regNo}`,
         {
           ...user,
           profilePhoto: imageUrl,
@@ -122,7 +123,8 @@ const StudentDash = () => {
   // 2. FIXED PROFILE TEXT UPDATE
 const handleProfileUpdate = async () => {
     try {
-        const res = await axios.put(`http://localhost:5000/api/student/update-profile/${regNo}`, {
+        const res = await axios.put(`https://university-attendance-system-rqyy.onrender.com/api/student/update-profile/${regNo}`
+          , {
             name: user.name,
             mobile: user.mobile,
             profilePhoto: user.profilePhoto

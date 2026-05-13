@@ -28,7 +28,7 @@ const VerifyAccount = () => {
     const handleVerify = async (e) => {
         e.preventDefault();
         try {
-            await axios.post("http://localhost:5000/api/auth/verify-otp", { email, otp });
+            await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/verify-otp", { email, otp });
             alert("Account Verified!");
             navigate("/login");
         } catch (err) {
@@ -39,7 +39,7 @@ const VerifyAccount = () => {
     const handleResend = async () => {
         if (!canResend) return;
         try {
-            await axios.post("http://localhost:5000/api/auth/resend-otp", { email });
+            await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/resend-otp", { email });
             alert("New OTP sent!");
             setTimer(60); // Reset timer
             setCanResend(false);

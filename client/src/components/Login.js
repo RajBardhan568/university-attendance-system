@@ -26,7 +26,12 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/login", {
+      // const res = await axios.post("http://localhost:5000/api/auth/login",
+        const res = await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/login"
+        
+        ,
+        
+        {
         email: formData.email,
         password: formData.password,
       });

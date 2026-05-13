@@ -78,7 +78,11 @@ const Register = () => {
     if (file && role === "student") data.append("profilePhoto", file);
 
     try {
-      await axios.post("http://localhost:5000/api/auth/register", data);
+      // await axios.post("http://localhost:5000/api/auth/register"
+
+      await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/register"
+        
+        , data);
       alert("OTP sent to your email!");
       setStep(2);
       setTimer(30); // Reset timer when moving to OTP step
@@ -93,7 +97,8 @@ const Register = () => {
   const handleResendOtp = async () => {
     try {
       setLoading(true);
-      await axios.post("http://localhost:5000/api/auth/resend-otp", { email: formData.email });
+      await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/resend-otp"
+        , { email: formData.email });
       alert("A new OTP has been sent!");
       setTimer(30);
       setCanResend(false);
@@ -108,7 +113,7 @@ const Register = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post("http://localhost:5000/api/auth/verify-otp", {
+      await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/verify-otp", {
         email: formData.email,
         otp: otp,
       });

@@ -73,7 +73,7 @@ const TeacherDash = ({ teacherId }) => {
     try {
       // Updated URL to match the new session-count route
       const res = await axios.get(
-        `http://localhost:5000/api/teacher/session-count/${subjectId}`,
+        `https://university-attendance-system-rqyy.onrender.com/api/teacher/session-count/${subjectId}`,
       );
       setTodayCounts((prev) => ({ ...prev, [subjectId]: res.data.count }));
     } catch (err) {
@@ -84,7 +84,7 @@ const TeacherDash = ({ teacherId }) => {
   const fetchSubjects = async () => {
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/teacher/my-subjects/${teacherId}`,
+        `https://university-attendance-system-rqyy.onrender.com/api/teacher/my-subjects/${teacherId}`,
       );
       setSubjects(res.data);
     } catch (err) {
@@ -107,7 +107,8 @@ const TeacherDash = ({ teacherId }) => {
     if (!searchQuery) return;
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/teacher/search-student/${searchQuery}`,
+        `https://university-attendance-system-rqyy.onrender.com/api/teacher/search-student/${searchQuery}`,
+        
       );
       setSearchResult(res.data);
     } catch (err) {
@@ -119,7 +120,7 @@ const TeacherDash = ({ teacherId }) => {
   const handleUpdateProfile = async () => {
     try {
       // Assuming you have an update route: /api/auth/update
-      // await axios.put(`http://localhost:5000/api/auth/update/${user._id}`, user);
+      await axios.put(`https://university-attendance-system-rqyy.onrender.com/api/auth/update/${user._id}`, user);
       localStorage.setItem("user", JSON.stringify(user));
       setIsEditing(false);
       alert("Profile Updated Successfully!");
@@ -132,7 +133,7 @@ const TeacherDash = ({ teacherId }) => {
     e.preventDefault();
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/teacher/add-subject",
+        "https://university-attendance-system-rqyy.onrender.com/api/teacher/add-subject",
         {
           subjectName: subjectForm.name,
           semester: subjectForm.sem,
@@ -156,7 +157,7 @@ const TeacherDash = ({ teacherId }) => {
     navigator.geolocation.getCurrentPosition(async (pos) => {
       try {
         const res = await axios.post(
-          "http://localhost:5000/api/teacher/generate-code",
+          "https://university-attendance-system-rqyy.onrender.com/api/teacher/generate-code",
           {
             subjectId,
             incrementBy: Number(count),
@@ -183,7 +184,10 @@ const TeacherDash = ({ teacherId }) => {
   const downloadReport = async (subject, format) => {
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/teacher/subject-stats/${subject._id}`,
+        `https://university-attendance-system-rqyy.onrender.com/api/teacher/subject-stats/${subject._id}`
+        
+        
+        ,
       );
       const data = res.data;
 
@@ -460,7 +464,7 @@ const TeacherDash = ({ teacherId }) => {
                           if (window.confirm("Delete this subject?")) {
                             try {
                               await axios.delete(
-                                `http://localhost:5000/api/teacher/delete-subject/${sub._id}`,
+                                `https://university-attendance-system-rqyy.onrender.com/api/teacher/delete-subject/${sub._id}`,
                               );
                               setSubjects(
                                 subjects.filter((s) => s._id !== sub._id),
