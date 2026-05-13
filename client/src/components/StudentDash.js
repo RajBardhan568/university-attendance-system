@@ -208,8 +208,7 @@ const handleProfileUpdate = async () => {
                 />
                 <button
                   onClick={markAttendance}
-                  className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 flex items-center gap-2 active:scale-95 transition-all"
-                >
+                 className="w-full md:w-1/3 bg-indigo-600 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
                   <CheckCircle size={20} /> Submit
                 </button>
               </div>
