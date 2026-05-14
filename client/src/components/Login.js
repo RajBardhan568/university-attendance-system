@@ -17,6 +17,7 @@ const Login = () => {
     email: "",
     password: "",
   });
+  const [loading, setLoading] = useState(false);
 
   // Handle input changes
   const handleChange = (e) => {
@@ -51,8 +52,10 @@ const Login = () => {
   };
 
   return (
+    
     <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6 font-sans">
       <div className="w-full max-w-md bg-white rounded-[3rem] shadow-2xl shadow-indigo-100 border border-slate-100 p-10 relative overflow-hidden">
+        
         
         {/* Decorative Element */}
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-50 rounded-full blur-3xl opacity-60"></div>
@@ -131,7 +134,13 @@ const Login = () => {
             Sign In to Dashboard <ArrowRight size={20} />
           </button>
         </form>
-
+        {/* Loader when delay in network */}
+{loading && (
+  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center rounded-[3rem]">
+    <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+    <p className="text-indigo-600 font-black text-xs uppercase tracking-widest">Processing...</p>
+  </div>
+)}
         <div className="mt-8 text-center">
           <p className="text-slate-400 font-bold text-sm">
             Not registered yet?{" "}

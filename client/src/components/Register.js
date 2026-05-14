@@ -10,6 +10,7 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [otp, setOtp] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false); // Separate state for resend
   
   // Resend OTP Timer States
   const [timer, setTimer] = useState(30);
@@ -45,7 +46,7 @@ const Register = () => {
 
   const handleInitialSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    // setLoading(true);
 
     // Validations
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -54,20 +55,25 @@ const Register = () => {
       return alert("Please enter a valid university email address.");
     }
 
-    if (!/^[0-9]{10}$/.test(formData.mobile)) {
-      setLoading(false);
-      return alert("Mobile number must be exactly 10 digits.");
-    }
+    // 1. Name Length Check
+  if (formData.name.length < 3 || formData.name.length > 50) {
+    return alert("Name must be between 3 and 50 characters.");
+  }
 
-    if (formData.password.length < 6) {
-      setLoading(false);
-      return alert("Password must be at least 6 characters.");
-    }
+  // 2. Mobile Strict Check
+  if (formData.mobile.length !== 10) {
+    return alert("Please enter a valid 10-digit mobile number.");
+  }
 
-    if (role === "student" && !file) {
-      setLoading(false);
-      return alert("Students must upload a profile photo!");
+  // 3. Image Size Check (if student)
+  if (role === "student" && file) {
+    const fileSizeMB = file.size / (1024 * 1024);
+    if (fileSizeMB > 2) {
+      return alert("Profile photo must be less than 2MB.");
     }
+  }
+
+  setLoading(true);
 
     const data = new FormData();
     Object.keys(formData).forEach((key) => {
@@ -94,20 +100,21 @@ const Register = () => {
     }
   };
 
-  const handleResendOtp = async () => {
-    try {
-      setLoading(true);
-      await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/resend-otp"
-        , { email: formData.email });
-      alert("A new OTP has been sent!");
-      setTimer(30);
-      setCanResend(false);
-    } catch (err) {
-      alert("Failed to resend OTP");
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleResendOtp = async () => {
+  setResendLoading(true); // Only trigger the resend loader
+  try {
+    await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/resend-otp", { 
+      email: formData.email 
+    });
+    alert("A new OTP has been sent!");
+    setTimer(30);
+    setCanResend(false);
+  } catch (err) {
+    alert("Failed to resend OTP");
+  } finally {
+    setResendLoading(false);
+  }
+};
 
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
@@ -212,7 +219,12 @@ const Register = () => {
             </form>
           </>
         )}
-
+{loading && (
+  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center rounded-[3rem]">
+    <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+    <p className="text-indigo-600 font-black text-xs uppercase tracking-widest">Processing...</p>
+  </div>
+)}
         {step === 2 && (
           <div className="text-center py-4">
             <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-indigo-200">
