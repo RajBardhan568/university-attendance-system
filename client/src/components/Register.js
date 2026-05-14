@@ -44,42 +44,51 @@ const Register = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleInitialSubmit = async (e) => {
+const handleInitialSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
 
-    // Validations
+    // 1. Name Validation: Only alphabets and spaces, length 3-30
+    const nameRegex = /^[A-Za-z\s]+$/;
+    if (!nameRegex.test(formData.name) || formData.name.length < 3 || formData.name.length > 30) {
+      // Logic: Stop loader before alerting
+      setLoading(false); 
+      return alert("Name must contain only letters and be between 3 to 30 characters.");
+    }
+
+    // 2. Email Validation: Basic format check
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setLoading(false);
       return alert("Please enter a valid university email address.");
     }
 
-    // 1. Name Length Check
-  if (formData.name.length < 3 || formData.name.length > 50) {
-    return alert("Name must be between 3 and 50 characters.");
+    // 3. Mobile Validation: Exactly 10 digits
+    if (formData.mobile.length !== 10) {
       setLoading(false);
-
-  }
-
-  // 2. Mobile Strict Check
-  if (formData.mobile.length !== 10) {
-    return alert("Please enter a valid 10-digit mobile number.");
-      setLoading(false);
-
-  }
-
-  // 3. Image Size Check (if student)
-  if (role === "student" && file) {
-    const fileSizeMB = file.size / (1024 * 1024);
-    if (fileSizeMB > 2) {
-      return alert("Profile photo must be less than 2MB.");
-      setLoading(false);
-
+      return alert("Mobile number must be exactly 10 digits.");
     }
-  }
 
-  // setLoading(true);
+    // 4. Registration No: Max 15 characters (for students)
+    if (role === "student" && formData.regNo.length > 15) {
+      setLoading(false);
+      return alert("Registration number cannot exceed 15 characters.");
+    }
+
+    // 5. Image Size Check: Strict 100KB limit for Students
+    if (role === "student") {
+      if (!file) {
+        setLoading(false);
+        return alert("Please upload a profile photo.");
+      }
+      // Check size in bytes (100KB = 102400 bytes)
+      if (file.size > 102400) { 
+        setLoading(false);
+        return alert("Profile photo must be less than 100KB.");
+      }
+    }
+
+    // Start Loader for API call
+    setLoading(true);
 
     const data = new FormData();
     Object.keys(formData).forEach((key) => {
@@ -90,18 +99,17 @@ const Register = () => {
     if (file && role === "student") data.append("profilePhoto", file);
 
     try {
-      // await axios.post("http://localhost:5000/api/auth/register"
-
-      await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/register"
-        
-        , data);
+      // Backend Note: Ensure your controller does NOT .save() yet to avoid "Ghost Users"
+      await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/register", data);
+      
       alert("OTP sent to your email!");
       setStep(2);
-      setTimer(30); // Reset timer when moving to OTP step
+      setTimer(30); 
       setCanResend(false);
     } catch (err) {
       alert("Error: " + (err.response?.data?.error || "Registration failed"));
     } finally {
+      // Stop Loader when request completes
       setLoading(false);
     }
   };
