@@ -1,41 +1,33 @@
 import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
-import {
-  LayoutDashboard,
-  Mail,
-  Lock,
-  ArrowRight,
-  Eye,
-  EyeOff,
-} from "lucide-react";
-import { useNavigate, Link } from "react-router-dom";
+import { Mail, Lock, LayoutDashboard, ArrowRight, Eye, EyeOff } from "lucide-react";
 
 const Login = () => {
-  const navigate = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState({ email: "", password: "" });
+  const navigate = useNavigate();
 
-  // Handle input changes
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true); // Start Loader
-    try {const res = await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/login",{
-        email: formData.email,
-        password: formData.password,
-      });
-      
+    setLoading(true);
+    try {
+      const res = await axios.post(
+        "https://university-attendance-system-rqyy.onrender.com/api/auth/login",
+        formData
+      );
+
       localStorage.setItem("user", JSON.stringify(res.data.user));
       
-      // Use window.location for a hard refresh to ensure App.js sees the new user
-      window.location.href = "/dashboard";
+      // Navigate based on role for a smoother SPA experience
+      const userRole = res.data.user.role;
+      navigate(userRole === "teacher" ? "/teacher-dashboard" : "/student-dashboard");
+      
     } catch (err) {
       if (err.response?.status === 403) {
         alert("Account not verified. Redirecting to verification...");
@@ -43,20 +35,30 @@ const Login = () => {
       } else {
         alert(err.response?.data?.error || "Login failed");
       }
-        setLoading(false); // Stop Loader
-      }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    
     <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6 font-sans">
+      {/* Main Card Container */}
       <div className="w-full max-w-md bg-white rounded-[3rem] shadow-2xl shadow-indigo-100 border border-slate-100 p-10 relative overflow-hidden">
         
-        
-        {/* Decorative Element */}
+        {/* 1. Loader Overlay (Covers the whole card) */}
+        {loading && (
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-md z-50 flex flex-col items-center justify-center">
+            <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+            <p className="text-indigo-600 font-black text-xs uppercase tracking-widest">
+              Verifying Credentials...
+            </p>
+          </div>
+        )}
+
+        {/* Decorative Background Blur */}
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-50 rounded-full blur-3xl opacity-60"></div>
 
+        {/* Header */}
         <div className="relative text-center mb-10">
           <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg shadow-indigo-200">
             <LayoutDashboard size={32} />
@@ -69,7 +71,8 @@ const Login = () => {
           </p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-6">
+        {/* Login Form */}
+        <form onSubmit={handleLogin} className="space-y-6 relative">
           {/* Email Field */}
           <div>
             <label className="block text-[10px] font-black text-slate-400 uppercase ml-4 mb-1">
@@ -95,10 +98,7 @@ const Login = () => {
               <label className="block text-[10px] font-black text-slate-400 uppercase">
                 Password
               </label>
-              <Link
-                to="/forgot-password"
-                className="text-indigo-600 hover:underline text-[10px] font-bold"
-              >
+              <Link to="/forgot-password" size={18} className="text-indigo-600 hover:underline text-[10px] font-bold">
                 Forgot Password?
               </Link>
             </div>
@@ -124,32 +124,16 @@ const Login = () => {
             </div>
           </div>
 
-          <button 
+          <button
             type="submit"
+            disabled={loading}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black shadow-xl shadow-indigo-100 transition-all active:scale-95 flex items-center justify-center gap-2"
           >
-            Sign In to Dashboard <ArrowRight size={20} />
+            {loading ? "Signing in..." : <><ArrowRight size={20} /> Sign In to Dashboard</>}
           </button>
         </form>
-        {/* Loader when delay in network */}
-<div className="relative">
-    {/* Loader Overlay */}
-    {loading && (
-      <div className="absolute inset-0 bg-white/80 backdrop-blur-md z-50 flex flex-col items-center justify-center rounded-[3rem]">
-        <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
-        <p className="text-indigo-600 font-black text-xs uppercase tracking-widest">Verifying Credentials...</p>
-      </div>
-    )}
 
-    {/* Existing Login Form */}
-    <form onSubmit={handleLogin}>
-       {/* ... inputs ... */}
-       <button disabled={loading} className="...">
-         {loading ? "Signing in..." : "Login to Portal"}
-       </button>
-    </form>
-  </div>
-);
+        {/* Footer */}
         <div className="mt-8 text-center">
           <p className="text-slate-400 font-bold text-sm">
             Not registered yet?{" "}
@@ -158,6 +142,7 @@ const Login = () => {
             </Link>
           </p>
         </div>
+
       </div>
     </div>
   );
