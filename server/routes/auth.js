@@ -1,4 +1,4 @@
-const bcrypt = require('bcryptjs'); // Add this at the top of auth.js
+const bcrypt = require('bcryptjs'); 
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
@@ -13,7 +13,6 @@ router.post('/register', upload.single('profilePhoto'), async (req, res) => {
     try {
         const { name, email, role } = req.body;
         
-        // Check if user already exists
         const existingUser = await User.findOne({ email });
         if (existingUser) return res.status(400).json({ error: "Email already registered" });
 
@@ -23,17 +22,17 @@ router.post('/register', upload.single('profilePhoto'), async (req, res) => {
             ...req.body,
             verificationToken: otp, 
             isVerified: false,
-            // Only save photo path if it's a student and file exists
             profilePhoto: (role === 'student' && req.file) ? req.file.path : ''
         });
 
         await newUser.save();
-// sendOTPEmail(email, otp);
-        await sendEmail(
+
+        // UPDATE: Removed 'await' so response is instant
+        sendEmail(
             email,
             "Your Verification Code",
             `Hello ${name}, your verification code is: ${otp}. It expires in 10 minutes.`
-        );
+        ).catch(err => console.error("Registration Email Error:", err));
 
         res.status(201).json({ message: "User registered. OTP sent." });
     } catch (err) {
@@ -41,7 +40,7 @@ router.post('/register', upload.single('profilePhoto'), async (req, res) => {
     }
 });
 
-// 2. VERIFY REGISTRATION OTP
+// 2. VERIFY REGISTRATION OTP (No changes needed)
 router.post("/verify-otp", async (req, res) => {
     try {
         const { email, otp } = req.body;
@@ -50,7 +49,7 @@ router.post("/verify-otp", async (req, res) => {
         if (!user) return res.status(400).json({ error: "Invalid or expired OTP" });
 
         user.isVerified = true;
-        user.verificationToken = undefined; // Clear OTP after success
+        user.verificationToken = undefined; 
         await user.save();
 
         res.json({ message: "Account verified successfully! You can now login." });
@@ -60,28 +59,25 @@ router.post("/verify-otp", async (req, res) => {
 });
 
 // 3. LOGIN ROUTE
-// 3. LOGIN ROUTE
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
         const user = await User.findOne({ email });
 
-        if (!user) {
-            return res.status(401).json({ error: "Invalid Email or Password" });
-        }
+        if (!user) return res.status(401).json({ error: "Invalid Email or Password" });
 
-        // Compare hashed password
         const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(401).json({ error: "Invalid Email or Password" });
-        }
+        if (!isMatch) return res.status(401).json({ error: "Invalid Email or Password" });
 
         if (!user.isVerified) {
-            const otp = Math.floor(100000 + Math.random() * 900000).toString();
+            const otp = generateOTP();
             user.verificationToken = otp;
             await user.save();
 
-            await sendEmail(user.email, "Verify Your Account", `Your code is: ${otp}`);
+            // UPDATE: Removed 'await'
+            sendEmail(user.email, "Verify Your Account", `Your code is: ${otp}`)
+                .catch(err => console.error("Login Email Error:", err));
+
             return res.status(403).json({ error: "Please verify your email before logging in." });
         }
 
@@ -91,7 +87,7 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// 4. FORGOT PASSWORD - STEP 1: Send OTP
+// 4. FORGOT PASSWORD
 router.post("/forgot-password", async (req, res) => {
     try {
         const { email } = req.body;
@@ -101,26 +97,28 @@ router.post("/forgot-password", async (req, res) => {
             { email },
             { 
                 resetPasswordToken: otp, 
-                resetPasswordExpires: Date.now() + 600000 // 10 Min Expiry
+                resetPasswordExpires: Date.now() + 600000 
             },
             { new: true }
         );
 
         if (!user) return res.status(404).json({ error: "User not found" });
 
-        await sendEmail(email, "Password Reset OTP", `Your password reset code is: ${otp}`);
+        // UPDATE: Removed 'await'
+        sendEmail(email, "Password Reset OTP", `Your password reset code is: ${otp}`)
+            .catch(err => console.error("Forgot Pass Email Error:", err));
+
         res.json({ message: "Reset OTP sent to your email!" });
     } catch (err) {
         res.status(500).json({ error: "Failed to send reset OTP" });
     }
 });
 
-// 5. FORGOT PASSWORD - STEP 2: Verify OTP & Set New Password
+// 5. RESET PASSWORD (No changes needed)
 router.post("/reset-password-otp", async (req, res) => {
     try {
         const { email, otp, newPassword } = req.body;
         
-        // Find user with matching email, valid OTP, and unexpired time
         const user = await User.findOne({
             email,
             resetPasswordToken: otp,
@@ -140,6 +138,7 @@ router.post("/reset-password-otp", async (req, res) => {
     }
 });
 
+// 6. RESEND OTP
 router.post("/resend-otp", async (req, res) => {
     try {
         const { email } = req.body;
@@ -148,17 +147,18 @@ router.post("/resend-otp", async (req, res) => {
         if (!user) return res.status(404).json({ error: "User not found" });
         if (user.isVerified) return res.status(400).json({ error: "Already verified" });
 
-        const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+        const newOtp = generateOTP();
         user.verificationToken = newOtp;
         await user.save();
 
-        await sendEmail(email, "Your New Verification Code", `Your new code is: ${newOtp}`);
+        // UPDATE: Removed 'await'
+        sendEmail(email, "Your New Verification Code", `Your new code is: ${newOtp}`)
+            .catch(err => console.error("Resend Email Error:", err));
+
         res.json({ message: "New OTP sent to your email!" });
     } catch (err) {
         res.status(500).json({ error: "Failed to resend OTP" });
     }
 });
-
-
 
 module.exports = router;

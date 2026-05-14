@@ -83,16 +83,20 @@ const Register = () => {
     if (file && role === "student") data.append("profilePhoto", file);
 
     try {
-      await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/register", data);
+      await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/register", data,{ timeout: 15000 });
       setStep(2);
       setTimer(30);
       setOtpExpiry(300);
       setCanResend(false);
-    } catch (err) {
-      alert(err.response?.data?.error || "Registration failed");
-    } finally {
-      setLoading(false);
-    }
+} catch (err) {
+  if (err.code === 'ECONNABORTED') {
+    alert("Server is taking too long. Please try again.");
+  } else {
+    alert(err.response?.data?.error || "Connection failed");
+  }
+} finally {
+  setLoading(false);
+}
   };
 
   const handleResendOtp = async () => {
