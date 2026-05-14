@@ -1,7 +1,14 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Mail, Lock, LayoutDashboard, ArrowRight, Eye, EyeOff } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  LayoutDashboard,
+  ArrowRight,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
@@ -19,15 +26,18 @@ const Login = () => {
     try {
       const res = await axios.post(
         "https://university-attendance-system-rqyy.onrender.com/api/auth/login",
-        formData
+        formData,
       );
 
       localStorage.setItem("user", JSON.stringify(res.data.user));
-      
+      // Use this to force the browser to reload the user state into App.js
+      window.location.href =
+        res.data.user.role ="/dashboard"
       // Navigate based on role for a smoother SPA experience
       const userRole = res.data.user.role;
-      navigate(userRole === "teacher" ? "/teacher-dashboard" : "/student-dashboard");
-      
+      navigate(
+        userRole === "teacher" ? "/teacher-dashboard" : "/student-dashboard",
+      );
     } catch (err) {
       if (err.response?.status === 403) {
         alert("Account not verified. Redirecting to verification...");
@@ -44,7 +54,6 @@ const Login = () => {
     <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6 font-sans">
       {/* Main Card Container */}
       <div className="w-full max-w-md bg-white rounded-[3rem] shadow-2xl shadow-indigo-100 border border-slate-100 p-10 relative overflow-hidden">
-        
         {/* 1. Loader Overlay (Covers the whole card) */}
         {loading && (
           <div className="absolute inset-0 bg-white/80 backdrop-blur-md z-50 flex flex-col items-center justify-center">
@@ -79,7 +88,10 @@ const Login = () => {
               Email Address
             </label>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+              <Mail
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
+                size={18}
+              />
               <input
                 type="email"
                 name="email"
@@ -98,13 +110,20 @@ const Login = () => {
               <label className="block text-[10px] font-black text-slate-400 uppercase">
                 Password
               </label>
-              <Link to="/forgot-password" size={18} className="text-indigo-600 hover:underline text-[10px] font-bold">
+              <Link
+                to="/forgot-password"
+                size={18}
+                className="text-indigo-600 hover:underline text-[10px] font-bold"
+              >
                 Forgot Password?
               </Link>
             </div>
 
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+              <Lock
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
+                size={18}
+              />
               <input
                 type={showPassword ? "text" : "password"}
                 name="password"
@@ -129,7 +148,13 @@ const Login = () => {
             disabled={loading}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black shadow-xl shadow-indigo-100 transition-all active:scale-95 flex items-center justify-center gap-2"
           >
-            {loading ? "Signing in..." : <><ArrowRight size={20} /> Sign In to Dashboard</>}
+            {loading ? (
+              "Signing in..."
+            ) : (
+              <>
+                <ArrowRight size={20} /> Sign In to Dashboard
+              </>
+            )}
           </button>
         </form>
 
@@ -142,7 +167,6 @@ const Login = () => {
             </Link>
           </p>
         </div>
-
       </div>
     </div>
   );
