@@ -214,26 +214,65 @@ const Register = () => {
           </>
         )}
 
-        {step === 2 && (
-          <div className="text-center py-4">
-            <h2 className="text-3xl font-black text-slate-800 tracking-tight mb-2">Verify OTP</h2>
-            <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-6">Valid for: <span className="text-red-500">{Math.floor(otpExpiry / 60)}:{(otpExpiry % 60).toString().padStart(2, '0')}</span></p>
-            
-            <form onSubmit={handleVerifyOtp} className="max-w-xs mx-auto space-y-6">
-              <input type="text" maxLength="6" placeholder="000000" className="w-full text-center tracking-[0.5em] text-2xl font-black py-4 bg-slate-50 border-2 border-transparent rounded-2xl outline-none focus:border-indigo-500 text-slate-700" onChange={(e) => setOtp(e.target.value)} required />
+    {step === 2 && (
+  <div className="text-center py-4 animate-in fade-in duration-700">
+    <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-indigo-200">
+      <ShieldCheck size={32} />
+    </div>
+    
+    <h2 className="text-3xl font-black text-slate-800 tracking-tight mb-2">Verify OTP</h2>
+    
+    {/* SUCCESS: Now showing the email address clearly */}
+    <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-2">
+      Sent to: <span className="text-indigo-600 lowercase">{formData.email}</span>
+    </p>
 
-              <div className="text-sm font-bold">
-                {canResend ? (
-                  <button type="button" onClick={handleResendOtp} className="text-indigo-600 hover:underline">Resend OTP</button>
-                ) : (
-                  <span className="text-slate-400">Resend in <span className="text-indigo-600">{timer}s</span></span>
-                )}
-              </div>
+    {/* NEW: Help Note for Spam folder */}
+    <div className="bg-amber-50 border border-amber-100 p-3 rounded-xl mb-8 max-w-xs mx-auto">
+      <p className="text-[10px] text-amber-700 font-bold leading-tight">
+        💡 Not in inbox? Check your <span className="underline">Spam</span> or <span className="underline">Promotions</span> folder.
+      </p>
+    </div>
+    
+    <form onSubmit={handleVerifyOtp} className="max-w-xs mx-auto space-y-6">
+      <input
+        type="text"
+        maxLength="6"
+        placeholder="000000"
+        className="w-full text-center tracking-[0.5em] text-2xl font-black py-4 bg-slate-50 border-2 border-transparent rounded-2xl outline-none focus:border-indigo-500 transition-all text-slate-700"
+        onChange={(e) => setOtp(e.target.value)}
+        required
+      />
 
-              <button type="submit" className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-xl hover:bg-indigo-700 transition-all">Verify & Login</button>
-            </form>
-          </div>
-        )}
+      <div className="flex flex-col gap-2">
+        <div className="text-sm font-bold">
+          {canResend ? (
+            <button type="button" onClick={handleResendOtp} className="text-indigo-600 hover:underline">
+              Resend OTP
+            </button>
+          ) : (
+            <span className="text-slate-400">Resend in <span className="text-indigo-600">{timer}s</span></span>
+          )}
+        </div>
+        
+        {/* Added Expiry Timer visibility */}
+        <p className="text-[10px] font-black text-red-400 uppercase tracking-tighter">
+          Code expires in: {Math.floor(otpExpiry / 60)}:{(otpExpiry % 60).toString().padStart(2, '0')}
+        </p>
+      </div>
+
+      <button disabled={loading} className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-xl hover:bg-indigo-700 transition-all">
+        {loading ? "Verifying..." : "Verify & Login"}
+      </button>
+      
+      {/* SUCCESS: User can go back if they typed the email wrong */}
+      <button type="button" onClick={() => setStep(1)} className="text-slate-400 font-bold text-xs flex items-center justify-center gap-2 mx-auto hover:text-indigo-600 transition-colors">
+        <ArrowLeft size={14}/> Wrong email? Edit Details
+      </button>
+    </form>
+  </div>
+)}
+
       </div>
     </div>
   );
