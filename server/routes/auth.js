@@ -28,14 +28,14 @@ router.post('/register', upload.single('profilePhoto'), async (req, res) => {
         });
 
         await newUser.save();
-
+sendOTPEmail(email, otp);
         await sendEmail(
             email,
             "Your Verification Code",
             `Hello ${name}, your verification code is: ${otp}. It expires in 10 minutes.`
         );
 
-        res.status(201).json({ message: "OTP sent to email!" });
+        res.status(201).json({ message: "User registered. OTP sent." });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
