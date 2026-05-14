@@ -10,44 +10,61 @@ const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString()
 
 // 1. REGISTER USER
 // 1. REGISTER USER
+// 1. REGISTER USER
 router.post('/register', upload.single('profilePhoto'), async (req, res) => {
     try {
-        const { name, email, role, password } = req.body;
+        const { name, email, role, password, mobile, regNo } = req.body;
         
-        // 1. Find if the user exists
-        const existingUser = await User.findOne({ email });
+        // --- 1. STRICT MULTI-FIELD VALIDATION ---
+        // Check if ANY of the unique fields are already verified in the system
+        const existingVerifiedUser = await User.findOne({
+            $or: [
+                { email: email },
+                { mobile: mobile },
+                ...(role === 'student' ? [{ regNo: regNo }] : []) // Only check regNo for students
+            ],
+            isVerified: true
+        });
 
-        if (existingUser) {
-            // IF USER EXISTS BUT IS NOT VERIFIED: Allow them to "re-register"
-            if (!existingUser.isVerified) {
-                const otp = generateOTP();
-                
-                // Update the unverified user with new details (in case they made a typo)
-                existingUser.name = name;
-                existingUser.password = password; // The Model middleware will hash this
-                existingUser.verificationToken = otp;
-                existingUser.role = role;
-                if (role === 'student' && req.file) {
-                    existingUser.profilePhoto = req.file.path;
-                }
-                
-                await existingUser.save();
-
-                // Send email in background (No 'await' = Instant UI)
-                sendEmail(
-                    email,
-                    "Your New Verification Code",
-                    `Hello ${name}, your new code is: ${otp}`
-                ).catch(err => console.error("Re-register Email Error:", err));
-
-                return res.status(201).json({ message: "Unverified account found. New OTP sent." });
-            } 
+        if (existingVerifiedUser) {
+            let conflictField = "Email";
+            if (existingVerifiedUser.mobile === mobile) conflictField = "Mobile number";
+            if (role === 'student' && existingVerifiedUser.regNo === regNo) conflictField = "Registration number";
             
-            // IF USER EXISTS AND IS ALREADY VERIFIED: Block them
-            return res.status(400).json({ error: "Email already registered and verified. Please login." });
+            return res.status(400).json({ 
+                error: `${conflictField} is already registered to a verified account.` 
+            });
         }
 
-        // IF USER DOES NOT EXIST AT ALL: Create new
+        // --- 2. HANDLE UNVERIFIED RE-REGISTRATION ---
+        // If an unverified account exists with this email, allow update
+        const unverifiedUser = await User.findOne({ email, isVerified: false });
+
+        if (unverifiedUser) {
+            const otp = generateOTP();
+            
+            unverifiedUser.name = name;
+            unverifiedUser.password = password; 
+            unverifiedUser.mobile = mobile;
+            unverifiedUser.regNo = regNo;
+            unverifiedUser.verificationToken = otp;
+            unverifiedUser.role = role;
+            if (role === 'student' && req.file) {
+                unverifiedUser.profilePhoto = req.file.path;
+            }
+            
+            await unverifiedUser.save();
+
+            sendEmail(
+                email,
+                "Your New Verification Code",
+                `Hello ${name}, your new code is: ${otp}`
+            ).catch(err => console.error("Re-register Email Error:", err));
+
+            return res.status(201).json({ message: "Unverified account found. New OTP sent." });
+        }
+
+        // --- 3. CREATE TOTALLY NEW USER ---
         const otp = generateOTP();
         const newUser = new User({
             ...req.body,
@@ -58,7 +75,6 @@ router.post('/register', upload.single('profilePhoto'), async (req, res) => {
 
         await newUser.save();
 
-        // Send email in background (No 'await' = Instant UI)
         sendEmail(
             email,
             "Your Verification Code",

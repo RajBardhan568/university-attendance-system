@@ -26,13 +26,8 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    try {
-      // const res = await axios.post("http://localhost:5000/api/auth/login",
-        const res = await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/login"
-        
-        ,
-        
-        {
+    setLoading(true); // Start Loader
+    try {const res = await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/login",{
         email: formData.email,
         password: formData.password,
       });
@@ -47,6 +42,8 @@ const Login = () => {
         navigate("/verify-account", { state: { email: formData.email } });
       } else {
         alert(err.response?.data?.error || "Login failed");
+      }
+        setLoading(false); // Stop Loader
       }
     }
   };
@@ -135,12 +132,24 @@ const Login = () => {
           </button>
         </form>
         {/* Loader when delay in network */}
-{loading && (
-  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center rounded-[3rem]">
-    <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
-    <p className="text-indigo-600 font-black text-xs uppercase tracking-widest">Processing...</p>
+<div className="relative">
+    {/* Loader Overlay */}
+    {loading && (
+      <div className="absolute inset-0 bg-white/80 backdrop-blur-md z-50 flex flex-col items-center justify-center rounded-[3rem]">
+        <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+        <p className="text-indigo-600 font-black text-xs uppercase tracking-widest">Verifying Credentials...</p>
+      </div>
+    )}
+
+    {/* Existing Login Form */}
+    <form onSubmit={handleLogin}>
+       {/* ... inputs ... */}
+       <button disabled={loading} className="...">
+         {loading ? "Signing in..." : "Login to Portal"}
+       </button>
+    </form>
   </div>
-)}
+);
         <div className="mt-8 text-center">
           <p className="text-slate-400 font-bold text-sm">
             Not registered yet?{" "}
