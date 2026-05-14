@@ -46,7 +46,7 @@ const Register = () => {
 
   const handleInitialSubmit = async (e) => {
     e.preventDefault();
-    // setLoading(true);
+    setLoading(true);
 
     // Validations
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -73,7 +73,7 @@ const Register = () => {
     }
   }
 
-  setLoading(true);
+  // setLoading(true);
 
     const data = new FormData();
     Object.keys(formData).forEach((key) => {
