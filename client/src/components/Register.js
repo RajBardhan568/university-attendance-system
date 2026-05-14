@@ -58,11 +58,15 @@ const Register = () => {
     // 1. Name Length Check
   if (formData.name.length < 3 || formData.name.length > 50) {
     return alert("Name must be between 3 and 50 characters.");
+      setLoading(false);
+
   }
 
   // 2. Mobile Strict Check
   if (formData.mobile.length !== 10) {
     return alert("Please enter a valid 10-digit mobile number.");
+      setLoading(false);
+
   }
 
   // 3. Image Size Check (if student)
@@ -70,6 +74,8 @@ const Register = () => {
     const fileSizeMB = file.size / (1024 * 1024);
     if (fileSizeMB > 2) {
       return alert("Profile photo must be less than 2MB.");
+      setLoading(false);
+
     }
   }
 
