@@ -28,7 +28,7 @@ router.post('/register', upload.single('profilePhoto'), async (req, res) => {
         });
 
         await newUser.save();
-sendOTPEmail(email, otp);
+// sendOTPEmail(email, otp);
         await sendEmail(
             email,
             "Your Verification Code",
