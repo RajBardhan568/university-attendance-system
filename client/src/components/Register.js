@@ -272,7 +272,22 @@ const Register = () => {
     </form>
   </div>
 )}
-
+{/* STEP 3: SUCCESS ANIMATION */}
+{step === 3 && (
+    <div className="text-center py-10 animate-in zoom-in duration-500">
+        <div className="w-24 h-24 bg-green-50 text-green-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-green-100">
+            <CheckCircle size={48} fill="currentColor" className="text-white fill-green-500" />
+        </div>
+        <h2 className="text-4xl font-black text-slate-800 tracking-tight">Success!</h2>
+        <p className="text-slate-500 font-bold mt-2">Your account has been verified.</p>
+        <div className="mt-8 flex flex-col items-center gap-2">
+            <div className="w-10 h-1 border-t-2 border-slate-100 animate-pulse"></div>
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
+                Redirecting to login portal
+            </p>
+        </div>
+    </div>
+)}
       </div>
     </div>
   );

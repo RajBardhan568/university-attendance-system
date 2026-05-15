@@ -23,7 +23,7 @@ const StudentDash = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
-
+  const [isMarking, setIsMarking] = useState(false);
   // User State
   const [user, setUser] = useState(
     JSON.parse(localStorage.getItem("user")) || {},
@@ -50,6 +50,10 @@ const StudentDash = () => {
   // --- 3. ATTENDANCE LOGIC ---
   const markAttendance = async () => {
     if (!inputCode) return alert("Please enter a code");
+
+    // Start Loader
+    setIsMarking(true);
+
     const fingerprint = btoa(
       navigator.userAgent + navigator.languages + window.screen.width,
     );
@@ -68,77 +72,88 @@ const StudentDash = () => {
               lng: longitude,
             },
           );
-          alert(res.data.message);
-          setInputCode("");
-          fetchMyAttendance();
+
+          alert("✅ " + res.data.message);
+          setInputCode(""); // Clears the code from screen
+          fetchMyAttendance(); // Refresh the progress bars
         } catch (err) {
-          alert(err.response?.data?.error || "Verification Failed");
+          alert("❌ " + (err.response?.data?.error || "Verification Failed"));
+        } finally {
+          // Stop Loader
+          setIsMarking(false);
         }
       },
-      (err) => alert("Please enable Location Services."),
+      (err) => {
+        alert("📍 Please enable Location Services to mark attendance.");
+        setIsMarking(false); // Stop loader if location is denied
+      },
+      { enableHighAccuracy: true, timeout: 5000 }, // Professional addition for accuracy
     );
   };
 
   // --- 4. PROFILE LOGIC ---
   const [selectedFile, setSelectedFile] = useState(null);
 
-// Handle temporary image preview when user picks a file
-const handleImageSelection = (e) => {
+  // Handle temporary image preview when user picks a file
+  const handleImageSelection = (e) => {
     const file = e.target.files[0];
     if (file) {
-        if (file.size > 102400) return alert("Photo must be under 100KB");
-        setSelectedFile(file); // Store for final save
-        
-        // Local preview so the UI looks instant
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setUser({ ...user, profilePhoto: reader.result });
-        };
-        reader.readAsDataURL(file);
-    }
-};
+      if (file.size > 102400) return alert("Photo must be under 100KB");
+      setSelectedFile(file); // Store for final save
 
-// Unified Update for Student (Name + Mobile + Photo)
-const handleProfileUpdate = async () => {
+      // Local preview so the UI looks instant
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setUser({ ...user, profilePhoto: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Unified Update for Student (Name + Mobile + Photo)
+  const handleProfileUpdate = async () => {
     // 1. Validations
     const nameRegex = /^[A-Za-z\s]+$/;
-    if (!nameRegex.test(user.name) || user.name.length < 3 || user.name.length > 30) {
-        return alert("Name: 3-30 letters only.");
+    if (
+      !nameRegex.test(user.name) ||
+      user.name.length < 3 ||
+      user.name.length > 30
+    ) {
+      return alert("Name: 3-30 letters only.");
     }
     if (!/^\d{10}$/.test(user.mobile)) {
-        return alert("Mobile: Exactly 10 digits.");
+      return alert("Mobile: Exactly 10 digits.");
     }
 
     setLoading(true);
     try {
-        // 2. Use FormData (Backend expects multipart for students)
-        const data = new FormData();
-        data.append("name", user.name);
-        data.append("mobile", user.mobile);
-        if (selectedFile) {
-            data.append("profilePhoto", selectedFile);
-        }
+      // 2. Use FormData (Backend expects multipart for students)
+      const data = new FormData();
+      data.append("name", user.name);
+      data.append("mobile", user.mobile);
+      if (selectedFile) {
+        data.append("profilePhoto", selectedFile);
+      }
 
-        const res = await axios.put(
-            `https://university-attendance-system-rqyy.onrender.com/api/student/update-profile/${user.regNo}`,
-            data,
-            { headers: { "Content-Type": "multipart/form-data" } }
-        );
+      const res = await axios.put(
+        `https://university-attendance-system-rqyy.onrender.com/api/student/update-profile/${user.regNo}`,
+        data,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
 
-        // 3. Sync everything
-        setUser(res.data.user);
-        localStorage.setItem("user", JSON.stringify(res.data.user));
-        setIsEditing(false);
-        setSelectedFile(null); 
-        alert("Student Profile Updated!");
-
+      // 3. Sync everything
+      setUser(res.data.user);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+      setIsEditing(false);
+      setSelectedFile(null);
+      alert("Student Profile Updated!");
     } catch (err) {
-        console.error("Student Update Error:", err.response?.data || err.message);
-        alert(err.response?.data?.error || "Update failed.");
+      console.error("Student Update Error:", err.response?.data || err.message);
+      alert(err.response?.data?.error || "Update failed.");
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-};
+  };
   const handleLogout = () => {
     localStorage.clear();
     window.location.href = "/";
@@ -212,10 +227,22 @@ const handleProfileUpdate = async () => {
 
                 {/* Submit Button - Positioned clearly below */}
                 <button
+                  disabled={isMarking}
                   onClick={markAttendance}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-[2rem] font-black text-lg shadow-xl shadow-indigo-100 active:scale-95 transition-all flex items-center justify-center gap-3"
+                  className={`w-full py-4 rounded-2xl font-black shadow-xl transition-all flex items-center justify-center gap-3 
+        ${isMarking ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700 text-white"}`}
                 >
-                  <ShieldCheck size={24} /> Submit Attendance
+                  {isMarking ? (
+                    <>
+                      <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <span>Verifying Presence...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck size={20} />
+                      <span>Submit Attendance</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -307,95 +334,133 @@ const handleProfileUpdate = async () => {
           </div>
         ) : (
           /* PROFILE VIEW */
-  <div className="max-w-xl mx-auto bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100 text-center animate-in zoom-in duration-500">
-  <div className="relative w-36 h-36 mx-auto mb-8">
-    <div className="w-full h-full bg-indigo-50 rounded-[2.5rem] flex items-center justify-center text-indigo-600 text-5xl font-black overflow-hidden border-4 border-white shadow-xl">
-      {uploading ? (
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
-      ) : user.profilePhoto ? (
-        <img src={user.profilePhoto} alt="Profile" className="w-full h-full object-cover" />
-      ) : (
-        user.name?.charAt(0)
-      )}
-    </div>
-    <input type="file" id="profilePic" className="hidden" onChange={handleImageSelection} accept="image/*" />
-    <label htmlFor="profilePic" className="absolute -bottom-2 -right-2 bg-indigo-600 p-3 rounded-2xl shadow-lg text-white hover:scale-110 transition-transform cursor-pointer border-4 border-white">
-      <Camera size={20} />
-    </label>
-  </div>
+          <div className="max-w-xl mx-auto bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100 text-center animate-in zoom-in duration-500">
+            <div className="relative w-36 h-36 mx-auto mb-8">
+              <div className="w-full h-full bg-indigo-50 rounded-[2.5rem] flex items-center justify-center text-indigo-600 text-5xl font-black overflow-hidden border-4 border-white shadow-xl">
+                {uploading ? (
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+                ) : user.profilePhoto ? (
+                  <img
+                    src={user.profilePhoto}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  user.name?.charAt(0)
+                )}
+              </div>
+              <input
+                type="file"
+                id="profilePic"
+                className="hidden"
+                onChange={handleImageSelection}
+                accept="image/*"
+              />
+              <label
+                htmlFor="profilePic"
+                className="absolute -bottom-2 -right-2 bg-indigo-600 p-3 rounded-2xl shadow-lg text-white hover:scale-110 transition-transform cursor-pointer border-4 border-white"
+              >
+                <Camera size={20} />
+              </label>
+            </div>
 
-  <div className="space-y-6 text-center">
-    {isEditing ? (
-      <div className="space-y-4 text-left">
-        <div>
-          <label className="text-[10px] font-black text-slate-400 ml-2 uppercase">Full Name (Letters Only)</label>
-          <input
-            className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
-            value={user.name}
-            maxLength={30}
-            onInput={(e) => e.target.value = e.target.value.replace(/[^A-Za-z\s]/g, '')}
-            onChange={(e) => setUser({ ...user, name: e.target.value })}
-          />
-        </div>
-        <div>
-          <label className="text-[10px] font-black text-slate-400 ml-2 uppercase">Mobile Number</label>
-          <input
-            className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
-            value={user.mobile}
-            maxLength={10}
-            onInput={(e) => e.target.value = e.target.value.replace(/\D/g, '')}
-            onChange={(e) => setUser({ ...user, mobile: e.target.value })}
-          />
-        </div>
-        <div className="flex gap-3">
-          <button onClick={handleProfileUpdate} className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
-            <Save size={20} /> Save Changes
-          </button>
-          <button onClick={() => setIsEditing(false)} className="px-6 bg-slate-100 text-slate-500 py-4 rounded-2xl font-bold">Cancel</button>
-        </div>
-      </div>
-    ) : (
-      <>
-        <div>
-          <h2 className="text-3xl font-black text-slate-900 truncate px-4">
-            {user.name}
-          </h2>
-          <p className="text-indigo-600 font-bold uppercase tracking-[0.2em] text-[10px] mt-1">
-            Reg No: {regNo}
-          </p>
-        </div>
+            <div className="space-y-6 text-center">
+              {isEditing ? (
+                <div className="space-y-4 text-left">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 ml-2 uppercase">
+                      Full Name (Letters Only)
+                    </label>
+                    <input
+                      className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
+                      value={user.name}
+                      maxLength={30}
+                      onInput={(e) =>
+                        (e.target.value = e.target.value.replace(
+                          /[^A-Za-z\s]/g,
+                          "",
+                        ))
+                      }
+                      onChange={(e) =>
+                        setUser({ ...user, name: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 ml-2 uppercase">
+                      Mobile Number
+                    </label>
+                    <input
+                      className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
+                      value={user.mobile}
+                      maxLength={10}
+                      onInput={(e) =>
+                        (e.target.value = e.target.value.replace(/\D/g, ""))
+                      }
+                      onChange={(e) =>
+                        setUser({ ...user, mobile: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleProfileUpdate}
+                      className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2"
+                    >
+                      <Save size={20} /> Save Changes
+                    </button>
+                    <button
+                      onClick={() => setIsEditing(false)}
+                      className="px-6 bg-slate-100 text-slate-500 py-4 rounded-2xl font-bold"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <h2 className="text-3xl font-black text-slate-900 truncate px-4">
+                      {user.name}
+                    </h2>
+                    <p className="text-indigo-600 font-bold uppercase tracking-[0.2em] text-[10px] mt-1">
+                      Reg No: {regNo}
+                    </p>
+                  </div>
 
-        <div className="bg-slate-50 p-6 rounded-[2rem] text-left space-y-5 border border-slate-100 overflow-hidden">
-          <div className="flex justify-between items-center gap-4">
-            <span className="text-slate-400 font-bold text-xs uppercase tracking-widest shrink-0">Email Address</span>
-            <span className="font-black text-slate-500 italic text-sm truncate">{user.email}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-slate-400 font-bold text-xs uppercase tracking-widest">Mobile</span>
-            <span className="font-black text-slate-800">{user.mobile || "Not Provided"}</span>
-          </div>
-        </div>
-        <button onClick={() => setIsEditing(true)} className="w-full flex items-center justify-center gap-2 py-4 text-indigo-600 font-bold bg-indigo-50 rounded-2xl hover:bg-indigo-100 transition-all">
-          <Edit3 size={18} /> Edit Profile Details
-        </button>
-      </>
-    )}
-
-
+                  <div className="bg-slate-50 p-6 rounded-[2rem] text-left space-y-5 border border-slate-100 overflow-hidden">
+                    <div className="flex justify-between items-center gap-4">
+                      <span className="text-slate-400 font-bold text-xs uppercase tracking-widest shrink-0">
+                        Email Address
+                      </span>
+                      <span className="font-black text-slate-500 italic text-sm truncate">
+                        {user.email}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400 font-bold text-xs uppercase tracking-widest">
+                        Mobile
+                      </span>
+                      <span className="font-black text-slate-800">
+                        {user.mobile || "Not Provided"}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="w-full flex items-center justify-center gap-2 py-4 text-indigo-600 font-bold bg-indigo-50 rounded-2xl hover:bg-indigo-100 transition-all"
+                  >
+                    <Edit3 size={18} /> Edit Profile Details
+                  </button>
+                </>
+              )}
 
               <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest pt-4">
                 Administrative records are managed by the faculty.
               </p>
-
-  </div>
-</div>
-
-
-
+            </div>
+          </div>
         )}
-
-
-
       </div>
     </div>
   );

@@ -61,7 +61,7 @@ const TeacherDash = ({ teacherId }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResult, setSearchResult] = useState(null);
   const [loading, setLoading] = useState(false);
-
+const [generatingMap, setGeneratingMap] = useState({});
   // Profile Edit States
   const [isEditing, setIsEditing] = useState(false);
   const [user, setUser] = useState(
@@ -167,38 +167,51 @@ const handleUpdateProfile = async () => {
     }
   };
 
-  const generateCode = async (subjectId) => {
-    // Use the values from state, or the default if they don't exist yet
+const generateCode = async (subjectId) => {
     const count = manualIncrements[subjectId] || 1;
     const range = selectedRange[subjectId] || 20;
     const time = selectedTime[subjectId] || 5;
 
+    // Set loading for this specific subject
+    setGeneratingMap(prev => ({ ...prev, [subjectId]: true }));
+
     navigator.geolocation.getCurrentPosition(async (pos) => {
-      try {
-        const res = await axios.post(
-          "https://university-attendance-system-rqyy.onrender.com/api/teacher/generate-code",
-          {
-            subjectId,
-            incrementBy: Number(count),
-            teacherLat: pos.coords.latitude,
-            teacherLng: pos.coords.longitude,
-            timeLimit: Number(time), // Ensure this is a Number
-            rangeLimit: Number(range), // Ensure this is a Number
-          },
-        );
+        try {
+            const res = await axios.post(
+                "https://university-attendance-system-rqyy.onrender.com/api/teacher/generate-code",
+                {
+                    subjectId,
+                    incrementBy: Number(count),
+                    teacherLat: pos.coords.latitude,
+                    teacherLng: pos.coords.longitude,
+                    timeLimit: Number(time),
+                    rangeLimit: Number(range),
+                },
+            );
 
-        setSubjects(
-          subjects.map((s) =>
-            s._id === subjectId ? res.data.updatedSubject : s,
-          ),
-        );
+            setSubjects(
+                subjects.map((s) =>
+                    s._id === subjectId ? res.data.updatedSubject : s,
+                ),
+            );
 
-        fetchSessionCount(subjectId);
-      } catch (err) {
-        console.error("Generate error:", err);
-      }
+            await fetchSessionCount(subjectId);
+            
+            // OPTIONAL: Success alert
+            alert("✨ Session Code Generated Successfully!");
+
+        } catch (err) {
+            console.error("Generate error:", err);
+            alert("❌ Failed to generate code. Check server connection.");
+        } finally {
+            // Stop loading for this specific subject
+            setGeneratingMap(prev => ({ ...prev, [subjectId]: false }));
+        }
+    }, (err) => {
+        alert("📍 Location access required to generate secure codes.");
+        setGeneratingMap(prev => ({ ...prev, [subjectId]: false }));
     });
-  };
+};
 
   const downloadReport = async (subject, format) => {
     try {
@@ -588,12 +601,26 @@ const handleUpdateProfile = async () => {
                         <option value="20">20m</option>
                         <option value="50">50m</option>
                       </select>
-                      <button
-                        onClick={() => generateCode(sub._id)}
-                        className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all"
-                      >
-                        Generate
-                      </button>
+                    <button
+    disabled={generatingMap[subject._id]}
+    onClick={() => generateCode(subject._id)}
+    className={`w-full py-3 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 
+        ${generatingMap[subject._id] 
+            ? 'bg-indigo-100 text-indigo-400 cursor-not-allowed' 
+            : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100'}`}
+>
+    {generatingMap[subject._id] ? (
+        <>
+            <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+            <span>Securing Session...</span>
+        </>
+    ) : (
+        <>
+            <Zap size={18} />
+            <span>Generate New Code</span>
+        </>
+    )}
+</button>
                     </div>
 
                     {/* UPDATE: EXPORT DATA SECTION (Merged inside the loop, using 'sub') */}
