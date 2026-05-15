@@ -80,106 +80,65 @@ const StudentDash = () => {
   };
 
   // --- 4. PROFILE LOGIC ---
-  // Inside StudentDash.jsx
+  const [selectedFile, setSelectedFile] = useState(null);
 
-  // 1. FIXED IMAGE UPLOAD
-  const handleImageUpload = async (e) => {
+// Handle temporary image preview when user picks a file
+const handleImageSelection = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
-    setUploading(true);
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", "your_preset"); // Ensure this is correct in Cloudinary
-
-    try {
-      // Upload to Cloudinary
-      const cloudRes = await axios.post(
-        `https://api.cloudinary.com/v1_1/dtunifmss/image/upload`,
-        formData,
-      );
-      const imageUrl = cloudRes.data.secure_url;
-      // Validation check before calling API
-const validateInputs = () => {
-  const nameRegex = /^[A-Za-z\s]+$/;
-  if (!nameRegex.test(user.name) || user.name.length < 3 || user.name.length > 30) {
-    alert("Name must be 3-30 letters only (no numbers/symbols).");
-    return false;
-  }
-  if (user.mobile.length !== 10 || !/^\d+$/.test(user.mobile)) {
-    alert("Mobile number must be exactly 10 digits.");
-    return false;
-  }
-  return true;
+    if (file) {
+        if (file.size > 102400) return alert("Photo must be under 100KB");
+        setSelectedFile(file); // Store for final save
+        
+        // Local preview so the UI looks instant
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setUser({ ...user, profilePhoto: reader.result });
+        };
+        reader.readAsDataURL(file);
+    }
 };
 
-      // NEW: Save the URL to MongoDB immediately
-      const dbRes = await axios.put(
-        // `http://localhost:5000/api/student/update-profile/${regNo}`,
-        `https://university-attendance-system-rqyy.onrender.com/api/student/update-profile/${regNo}`,
-        {
-          ...user,
-          profilePhoto: imageUrl,
-        },
-      );
-
-      // Update Local State & Storage
-      setUser(dbRes.data.user);
-      localStorage.setItem("user", JSON.stringify(dbRes.data.user));
-      alert("Photo updated in database!");
-    } catch (err) {
-      alert("Upload failed. Check console.");
-      console.error(err);
-    } finally {
-      setUploading(false);
-    }
-  };
-
+// Unified Update for Student (Name + Mobile + Photo)
 const handleProfileUpdate = async () => {
-  // 1. Strict Validation (Letters for name, 10 digits for mobile)
-  if (!/^[A-Za-z\s]+$/.test(user.name) || user.name.length > 30) {
-    return alert("Invalid Name: Use only letters (Max 30).");
-  }
-  if (user.mobile.length !== 10) {
-    return alert("Mobile must be exactly 10 digits.");
-  }
-
-  setLoading(true);
-  try {
-    let response;
-    
-    if (user.role === "student") {
-      // Students use FormData for potential photo upload
-      const data = new FormData();
-      data.append("name", user.name);
-      data.append("mobile", user.mobile);
-      if (selectedFile) data.append("profilePhoto", selectedFile);
-
-      response = await axios.put(
-        `https://university-attendance-system-rqyy.onrender.com/api/student/update-profile/${user.regNo}`,
-        data
-      );
-    } else {
-      // Teachers use standard JSON (Fast & Clean)
-      response = await axios.put(
-        `https://university-attendance-system-rqyy.onrender.com/api/teacher/update-profile/${user._id}`,
-        { name: user.name, mobile: user.mobile }
-      );
+    // 1. Validations
+    const nameRegex = /^[A-Za-z\s]+$/;
+    if (!nameRegex.test(user.name) || user.name.length < 3 || user.name.length > 30) {
+        return alert("Name: 3-30 letters only.");
+    }
+    if (!/^\d{10}$/.test(user.mobile)) {
+        return alert("Mobile: Exactly 10 digits.");
     }
 
-    // Update Local Environment
-    setUser(response.data.user);
-    localStorage.setItem("user", JSON.stringify(response.data.user));
-    setIsEditing(false);
-    alert("Profile updated successfully!");
+    setLoading(true);
+    try {
+        // 2. Use FormData (Backend expects multipart for students)
+        const data = new FormData();
+        data.append("name", user.name);
+        data.append("mobile", user.mobile);
+        if (selectedFile) {
+            data.append("profilePhoto", selectedFile);
+        }
 
-  } catch (err) {
-    alert("Update failed. Please check your connection.");
-  } finally {
-    setLoading(false);
-  }
+        const res = await axios.put(
+            `https://university-attendance-system-rqyy.onrender.com/api/student/update-profile/${user.regNo}`,
+            data,
+            { headers: { "Content-Type": "multipart/form-data" } }
+        );
+
+        // 3. Sync everything
+        setUser(res.data.user);
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+        setIsEditing(false);
+        setSelectedFile(null); 
+        alert("Student Profile Updated!");
+
+    } catch (err) {
+        console.error("Student Update Error:", err.response?.data || err.message);
+        alert(err.response?.data?.error || "Update failed.");
+    } finally {
+        setLoading(false);
+    }
 };
-
   const handleLogout = () => {
     localStorage.clear();
     window.location.href = "/";
@@ -359,7 +318,7 @@ const handleProfileUpdate = async () => {
         user.name?.charAt(0)
       )}
     </div>
-    <input type="file" id="profilePic" className="hidden" onChange={handleImageUpload} accept="image/*" />
+    <input type="file" id="profilePic" className="hidden" onChange={handleImageSelection} accept="image/*" />
     <label htmlFor="profilePic" className="absolute -bottom-2 -right-2 bg-indigo-600 p-3 rounded-2xl shadow-lg text-white hover:scale-110 transition-transform cursor-pointer border-4 border-white">
       <Camera size={20} />
     </label>
