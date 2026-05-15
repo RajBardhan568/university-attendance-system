@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { User, Mail, Lock, Phone, Hash, Image as ImageIcon, ArrowLeft, ShieldCheck, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { User, Mail, Lock, Phone, Hash, Image as ImageIcon, ArrowLeft, ShieldCheck, ArrowRight, Eye, EyeOff,CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+
 
 const Register = () => {
   const [step, setStep] = useState(1);
@@ -122,7 +123,8 @@ const Register = () => {
         email: formData.email,
         otp: otp,
       });
-      navigate("/login");
+      setStep(3);
+setTimeout(() => navigate("/login"), 3000);
     } catch (err) {
       alert(err.response?.data?.error || "Invalid OTP");
     } finally {

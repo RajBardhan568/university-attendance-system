@@ -3,20 +3,7 @@ import axios from "axios";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx"; // Import this at the top
-import {
-  Trash2,
-  Download,
-  Plus,
-  Hash,
-  BookOpen,
-  Search,
-  User,
-  LayoutDashboard,
-  LogOut,
-  Edit3,
-  Save,
-  X,
-} from "lucide-react";
+import {Trash2,Download,Plus,Hash,BookOpen,Search,User,LayoutDashboard,LogOut,Edit3,Save,X,Zap,} from "lucide-react";
 
 const Timer = ({ expiresAt }) => {
   const [secondsLeft, setSecondsLeft] = useState(0);
@@ -61,7 +48,7 @@ const TeacherDash = ({ teacherId }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResult, setSearchResult] = useState(null);
   const [loading, setLoading] = useState(false);
-const [generatingMap, setGeneratingMap] = useState({});
+  const [generatingMap, setGeneratingMap] = useState({});
   // Profile Edit States
   const [isEditing, setIsEditing] = useState(false);
   const [user, setUser] = useState(
@@ -117,36 +104,35 @@ const [generatingMap, setGeneratingMap] = useState({});
     }
   };
 
-// Simplified Update for Teacher (Name + Mobile Only)
-const handleUpdateProfile = async () => {
+  // Simplified Update for Teacher (Name + Mobile Only)
+  const handleUpdateProfile = async () => {
     // 1. Validations
     if (!/^[A-Za-z\s]+$/.test(user.name) || user.name.length > 30) {
-        return alert("Invalid Name (Max 30 letters).");
+      return alert("Invalid Name (Max 30 letters).");
     }
     if (!/^\d{10}$/.test(user.mobile)) {
-        return alert("Mobile must be 10 digits.");
+      return alert("Mobile must be 10 digits.");
     }
 
     setLoading(true);
     try {
-        // 2. Standard JSON (No FormData needed for Teachers)
-        const res = await axios.put(
-            `https://university-attendance-system-rqyy.onrender.com/api/teacher/update-profile/${user._id}`,
-            { name: user.name, mobile: user.mobile }
-        );
+      // 2. Standard JSON (No FormData needed for Teachers)
+      const res = await axios.put(
+        `https://university-attendance-system-rqyy.onrender.com/api/teacher/update-profile/${user._id}`,
+        { name: user.name, mobile: user.mobile },
+      );
 
-        // 3. Sync
-        setUser(res.data.user);
-        localStorage.setItem("user", JSON.stringify(res.data.user));
-        setIsEditing(false);
-        alert("Teacher Profile Updated!");
-
+      // 3. Sync
+      setUser(res.data.user);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+      setIsEditing(false);
+      alert("Teacher Profile Updated!");
     } catch (err) {
-        alert(err.response?.data?.error || "Update failed.");
+      alert(err.response?.data?.error || "Update failed.");
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-};
+  };
 
   const addSubject = async (e) => {
     e.preventDefault();
@@ -167,51 +153,53 @@ const handleUpdateProfile = async () => {
     }
   };
 
-const generateCode = async (subjectId) => {
+  const generateCode = async (subjectId) => {
     const count = manualIncrements[subjectId] || 1;
     const range = selectedRange[subjectId] || 20;
     const time = selectedTime[subjectId] || 5;
 
     // Set loading for this specific subject
-    setGeneratingMap(prev => ({ ...prev, [subjectId]: true }));
+    setGeneratingMap((prev) => ({ ...prev, [subjectId]: true }));
 
-    navigator.geolocation.getCurrentPosition(async (pos) => {
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
         try {
-            const res = await axios.post(
-                "https://university-attendance-system-rqyy.onrender.com/api/teacher/generate-code",
-                {
-                    subjectId,
-                    incrementBy: Number(count),
-                    teacherLat: pos.coords.latitude,
-                    teacherLng: pos.coords.longitude,
-                    timeLimit: Number(time),
-                    rangeLimit: Number(range),
-                },
-            );
+          const res = await axios.post(
+            "https://university-attendance-system-rqyy.onrender.com/api/teacher/generate-code",
+            {
+              subjectId,
+              incrementBy: Number(count),
+              teacherLat: pos.coords.latitude,
+              teacherLng: pos.coords.longitude,
+              timeLimit: Number(time),
+              rangeLimit: Number(range),
+            },
+          );
 
-            setSubjects(
-                subjects.map((s) =>
-                    s._id === subjectId ? res.data.updatedSubject : s,
-                ),
-            );
+          setSubjects(
+            subjects.map((s) =>
+              s._id === subjectId ? res.data.updatedSubject : s,
+            ),
+          );
 
-            await fetchSessionCount(subjectId);
-            
-            // OPTIONAL: Success alert
-            alert("✨ Session Code Generated Successfully!");
+          await fetchSessionCount(subjectId);
 
+          // OPTIONAL: Success alert
+          alert("✨ Session Code Generated Successfully!");
         } catch (err) {
-            console.error("Generate error:", err);
-            alert("❌ Failed to generate code. Check server connection.");
+          console.error("Generate error:", err);
+          alert("❌ Failed to generate code. Check server connection.");
         } finally {
-            // Stop loading for this specific subject
-            setGeneratingMap(prev => ({ ...prev, [subjectId]: false }));
+          // Stop loading for this specific subject
+          setGeneratingMap((prev) => ({ ...prev, [subjectId]: false }));
         }
-    }, (err) => {
+      },
+      (err) => {
         alert("📍 Location access required to generate secure codes.");
-        setGeneratingMap(prev => ({ ...prev, [subjectId]: false }));
-    });
-};
+        setGeneratingMap((prev) => ({ ...prev, [subjectId]: false }));
+      },
+    );
+  };
 
   const downloadReport = async (subject, format) => {
     try {
@@ -482,7 +470,7 @@ const generateCode = async (subjectId) => {
                 {subjects.map((sub) => (
                   <div
                     key={sub._id}
-                    className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all"
+                    className="bg-white p-4 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all"
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div className="bg-indigo-50 p-3 rounded-2xl text-indigo-600">
@@ -596,31 +584,35 @@ const generateCode = async (subjectId) => {
 
                             [sub._id]: e.target.value,
                           })
-                        } >
+                        }
+                      >
                         <option value="10">10m</option>
                         <option value="20">20m</option>
                         <option value="50">50m</option>
                       </select>
-                    <button
-    disabled={generatingMap[subject._id]}
-    onClick={() => generateCode(subject._id)}
-    className={`w-full py-3 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 
-        ${generatingMap[subject._id] 
-            ? 'bg-indigo-100 text-indigo-400 cursor-not-allowed' 
-            : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100'}`}
->
-    {generatingMap[subject._id] ? (
-        <>
-            <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
-            <span>Securing Session...</span>
-        </>
+
+{/* 3. The Generate Button (Full Width, No Overlap) */}
+  <button
+    disabled={generatingMap[sub._id]}
+    onClick={() => generateCode(sub._id)}
+    className={`w-full py-3 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-3 border-2 
+      ${generatingMap[sub._id] 
+        ? 'bg-indigo-50 border-indigo-100 text-indigo-300 cursor-not-allowed' 
+        : 'bg-indigo-600 border-indigo-600 text-white hover:bg-white hover:text-indigo-600 hover:shadow-lg hover:shadow-indigo-100 active:scale-95 shadow-lg shadow-indigo-100'}`}
+  >
+    {generatingMap[sub._id] ? (
+      <>
+        <div className="w-3 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+        <span>Securing..</span>
+      </>
     ) : (
-        <>
-            <Zap size={18} />
-            <span>Generate New Code</span>
-        </>
+      <>
+        <Zap size={20} fill="currentColor" />
+        <span>Generate Code</span>
+      </>
     )}
-</button>
+  </button>
+                      
                     </div>
 
                     {/* UPDATE: EXPORT DATA SECTION (Merged inside the loop, using 'sub') */}
@@ -650,67 +642,95 @@ const generateCode = async (subjectId) => {
           </div>
         ) : (
           /* PROFILE - Responsive layout with Edit */
-<div className="max-w-xl mx-auto bg-white p-8 md:p-12 rounded-[3rem] shadow-xl border border-slate-100 text-center relative overflow-hidden">
-  <div className="relative w-32 h-32 mx-auto mb-6">
-    <div className="w-full h-full bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-5xl font-black">
-      {user.name?.charAt(0)}
-    </div>
-    <button onClick={() => setIsEditing(!isEditing)} className="absolute bottom-0 right-0 bg-white p-2 rounded-full shadow-lg text-indigo-600 border border-slate-100">
-      {isEditing ? <X size={20} /> : <Edit3 size={20} />}
-    </button>
-  </div>
+          <div className="max-w-xl mx-auto bg-white p-8 md:p-12 rounded-[3rem] shadow-xl border border-slate-100 text-center relative overflow-hidden">
+            <div className="relative w-32 h-32 mx-auto mb-6">
+              <div className="w-full h-full bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-5xl font-black">
+                {user.name?.charAt(0)}
+              </div>
+              <button
+                onClick={() => setIsEditing(!isEditing)}
+                className="absolute bottom-0 right-0 bg-white p-2 rounded-full shadow-lg text-indigo-600 border border-slate-100"
+              >
+                {isEditing ? <X size={20} /> : <Edit3 size={20} />}
+              </button>
+            </div>
 
-  {isEditing ? (
-    <div className="space-y-4 text-left">
-      <div>
-        <label className="text-xs font-black text-slate-400 ml-2">FULL NAME (LETTERS ONLY)</label>
-        <input
-          className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
-          value={user.name}
-          maxLength={30}
-          onInput={(e) => e.target.value = e.target.value.replace(/[^A-Za-z\s]/g, '')}
-          onChange={(e) => setUser({ ...user, name: e.target.value })}
-        />
-      </div>
-      <div>
-        <label className="text-xs font-black text-slate-400 ml-2">MOBILE NUMBER</label>
-        <input
-          className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
-          value={user.mobile}
-          maxLength={10}
-          onInput={(e) => e.target.value = e.target.value.replace(/\D/g, '')}
-          onChange={(e) => setUser({ ...user, mobile: e.target.value })}
-        />
-      </div>
-      <button onClick={handleUpdateProfile} className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
-        <Save size={20} /> Save Changes
-      </button>
-    </div>
-  ) : (
-    <div className="space-y-4">
-      <h2 className="text-3xl font-black text-slate-900 truncate px-4">{user.name}</h2>
-      <p className="text-indigo-600 font-black uppercase tracking-widest text-xs">Faculty ID: {teacherId}</p>
-      
-      <div className="bg-slate-50 p-6 rounded-3xl text-left space-y-4 mt-8 overflow-hidden">
-        <div className="flex justify-between items-center gap-4">
-          <span className="text-slate-400 font-bold shrink-0">Email</span>
-          <span className="font-black text-slate-700 truncate">{user.email}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-slate-400 font-bold">Mobile</span>
-          <span className="font-black text-slate-700">{user.mobile || "Not Provided"}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-slate-400 font-bold">Subjects</span>
-          <span className="font-black text-slate-700">{subjects.length}</span>
-        </div>
-      </div>
-    </div>
-  )}
-</div>
+            {isEditing ? (
+              <div className="space-y-4 text-left">
+                <div>
+                  <label className="text-xs font-black text-slate-400 ml-2">
+                    FULL NAME (LETTERS ONLY)
+                  </label>
+                  <input
+                    className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
+                    value={user.name}
+                    maxLength={30}
+                    onInput={(e) =>
+                      (e.target.value = e.target.value.replace(
+                        /[^A-Za-z\s]/g,
+                        "",
+                      ))
+                    }
+                    onChange={(e) => setUser({ ...user, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-black text-slate-400 ml-2">
+                    MOBILE NUMBER
+                  </label>
+                  <input
+                    className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
+                    value={user.mobile}
+                    maxLength={10}
+                    onInput={(e) =>
+                      (e.target.value = e.target.value.replace(/\D/g, ""))
+                    }
+                    onChange={(e) =>
+                      setUser({ ...user, mobile: e.target.value })
+                    }
+                  />
+                </div>
+                <button
+                  onClick={handleUpdateProfile}
+                  className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2"
+                >
+                  <Save size={20} /> Save Changes
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <h2 className="text-3xl font-black text-slate-900 truncate px-4">
+                  {user.name}
+                </h2>
+                <p className="text-indigo-600 font-black uppercase tracking-widest text-xs">
+                  Faculty ID: {teacherId}
+                </p>
 
-
-
+                <div className="bg-slate-50 p-6 rounded-3xl text-left space-y-4 mt-8 overflow-hidden">
+                  <div className="flex justify-between items-center gap-4">
+                    <span className="text-slate-400 font-bold shrink-0">
+                      Email
+                    </span>
+                    <span className="font-black text-slate-700 truncate">
+                      {user.email}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400 font-bold">Mobile</span>
+                    <span className="font-black text-slate-700">
+                      {user.mobile || "Not Provided"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400 font-bold">Subjects</span>
+                    <span className="font-black text-slate-700">
+                      {subjects.length}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
