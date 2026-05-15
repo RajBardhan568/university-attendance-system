@@ -117,20 +117,36 @@ const TeacherDash = ({ teacherId }) => {
     }
   };
 
-  // const handleUpdateProfile = async () => {
-  //   try {
-  //     // Assuming you have an update route: /api/auth/update
-  //     await axios.put(
-  //       `https://university-attendance-system-rqyy.onrender.com/api/auth/update/${user._id}`,
-  //       user,
-  //     );
-  //     localStorage.setItem("user", JSON.stringify(user));
-  //     setIsEditing(false);
-  //     alert("Profile Updated Successfully!");
-  //   } catch (err) {
-  //     alert("Update failed");
-  //   }
-  // };
+// Simplified Update for Teacher (Name + Mobile Only)
+const handleUpdateProfile = async () => {
+    // 1. Validations
+    if (!/^[A-Za-z\s]+$/.test(user.name) || user.name.length > 30) {
+        return alert("Invalid Name (Max 30 letters).");
+    }
+    if (!/^\d{10}$/.test(user.mobile)) {
+        return alert("Mobile must be 10 digits.");
+    }
+
+    setLoading(true);
+    try {
+        // 2. Standard JSON (No FormData needed for Teachers)
+        const res = await axios.put(
+            `https://university-attendance-system-rqyy.onrender.com/api/teacher/update-profile/${user._id}`,
+            { name: user.name, mobile: user.mobile }
+        );
+
+        // 3. Sync
+        setUser(res.data.user);
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+        setIsEditing(false);
+        alert("Teacher Profile Updated!");
+
+    } catch (err) {
+        alert(err.response?.data?.error || "Update failed.");
+    } finally {
+        setLoading(false);
+    }
+};
 
   const addSubject = async (e) => {
     e.preventDefault();
