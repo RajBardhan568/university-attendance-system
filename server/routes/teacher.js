@@ -36,32 +36,33 @@ router.get("/subject-stats/:subjectId", async (req, res) => {
   try {
     const { subjectId } = req.params;
     
-    // 1. Get all attendance for this subject
+    // 1. Only get attendance for this subject
     const attendances = await Attendance.find({ subjectId });
     
-    // 2. Get all students enrolled (or just all students)
-    const students = await User.find({ role: 'student' });
+    // 2. Get unique registration numbers from these attendance records
+    const studentRegs = [...new Set(attendances.map(a => a.studentReg))];
 
-    const stats = students.map(student => {
-      // Find all records matching this student's registration number
-      const studentRecords = attendances.filter(att => att.studentReg === student.regNo);
+    // 3. Fetch user details only for these active students
+    const stats = await Promise.all(studentRegs.map(async (regNo) => {
+      const user = await User.findOne({ regNo });
       
-      // Sum the 'count' field for the "Obtained" column
-      const totalAttended = studentRecords.reduce((sum, rec) => sum + (rec.count || 0), 0);
-
+      // Filter records for this specific student
+      const myRecords = attendances.filter(a => a.studentReg === regNo);
+      
       return {
-        regNo: student.regNo,
-        name: student.name,
-        attended: totalAttended,
-        // THIS IS WHAT IS MISSING IN YOUR SCREENSHOT:
-        attendanceRecords: studentRecords 
+        regNo: regNo,
+        name: user ? user.name : "Unknown Student",
+        attended: myRecords.reduce((sum, r) => sum + (r.count || 0), 0),
+        attendanceRecords: myRecords // Fuel for the Excel dates
       };
-    });
+    }));
+
+    // 4. Auto-arrange by Registration Number (Ascending)
+    stats.sort((a, b) => a.regNo.localeCompare(b.regNo));
 
     res.json(stats);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch stats" });
+    res.status(500).json({ error: "Stats failed" });
   }
 });
 // 4. MANUAL QUANTITY GENERATE CODE

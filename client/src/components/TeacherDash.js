@@ -252,58 +252,49 @@ const downloadReport = async (subject, format) => {
         headStyles: { fillColor: [79, 70, 229] },
       });
       doc.save(`${subject.subjectName}_Report.pdf`);
+} else if (format === "xlsx") {
+  // 1. Get unique dates with a safety check to avoid "Invalid Date"
+  const allDates = [...new Set(data.flatMap(s => 
+    (s.attendanceRecords || [])
+      .filter(r => r.createdAt) // Only process records with a timestamp
+      .map(r => new Date(r.createdAt).toLocaleDateString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric'
+      }))
+  ))].sort((a, b) => new Date(a) - new Date(b));
 
-    } else if (format === "xlsx") { // FIX 1: Changed "elseif" to "else if"
-      
-      // 1. Get all unique dates
-      const allDates = [...new Set(data.flatMap(s => 
-        (s.attendanceRecords || []).map(r => new Date(r.createdAt).toLocaleDateString('en-US', {
-          month: 'short', day: 'numeric', year: 'numeric'
-        }))
-      ))].sort((a, b) => new Date(a) - new Date(b));
+  // 2. Prepare Data
+  const excelData = data.map((s) => {
+    const totalClasses = subject.totalClasses || 1;
+    const pct = (s.attended / totalClasses) * 100;
+    
+    let row = {
+      "Registration No": s.regNo,
+      "Student Name": s.name,
+      "Classes Attended": s.attended,
+      "Total Classes": subject.totalClasses,
+      "Percentage": `${pct.toFixed(1)}%`,
+      "Status": pct >= 75 ? "OK" : "SHORTAGE",
+    };
 
-      // 2. Prepare the Matrix Data
-      const excelData = data.map((s) => {
-        const pct = (s.attended / (subject.totalClasses || 1)) * 100;
-        
-        let row = {
-          "Registration No": s.regNo,
-          "Student Name": s.name,
-          "Classes Attended": s.attended,
-          "Total Classes": subject.totalClasses,
-          "Percentage": `${pct.toFixed(1)}%`,
-          "Status": pct >= 75 ? "OK" : "SHORTAGE",
-        };
+    // 3. Auto-fill previous/skipped classes with 0 (Absent)
+    allDates.forEach(date => {
+      const countOnDate = (s.attendanceRecords || []).filter(r => 
+        new Date(r.createdAt).toLocaleDateString('en-GB', {
+          day: '2-digit', month: 'short', year: 'numeric'
+        }) === date
+      ).reduce((sum, r) => sum + (r.count || 0), 0);
 
-        allDates.forEach(date => {
-          const countOnDate = (s.attendanceRecords || []).filter(r => 
-            new Date(r.createdAt).toLocaleDateString('en-US', {
-              month: 'short', day: 'numeric', year: 'numeric'
-            }) === date
-          ).length;
+      row[date] = countOnDate > 0 ? `${countOnDate} (Present)` : "0 (Absent)";
+    });
 
-          row[date] = countOnDate > 0 ? `${countOnDate} (Present)` : "0 (Absent)";
-        });
+    return row;
+  });
 
-        return row;
-      });
-
-      // 3. Generate the Sheet
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance Matrix");
-
-      // 4. Auto-size columns
-      if (excelData.length > 0) {
-        const colWidths = Object.keys(excelData[0]).map(key => ({
-          wch: Math.max(key.length, 15)
-        }));
-        worksheet["!cols"] = colWidths;
-      }
-
-      XLSX.writeFile(workbook, `${subject.subjectName}_Attendance_Matrix.xlsx`);
-    } // FIX 2: Added missing closing brace for 'else if'
-
+  const worksheet = XLSX.utils.json_to_sheet(excelData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
+  XLSX.writeFile(workbook, `${subject.subjectName}_Attendance.xlsx`);
+}
   } catch (error) { // FIX 3: Balanced the try-catch block
     console.error(error);
     alert("Error downloading report");
