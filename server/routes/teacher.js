@@ -185,4 +185,20 @@ router.get("/session-count/:subjectId", async (req, res) => {
   }
 });
 
+// Teachers can ONLY update Name and Mobile (No 'upload' middleware needed)
+router.put('/update-profile/:id', async (req, res) => {
+    try {
+        const { name, mobile } = req.body;
+        
+        const updatedUser = await User.findByIdAndUpdate(
+            req.params.id,
+            { $set: { name, mobile } },
+            { new: true }
+        );
+        res.json({ success: true, user: updatedUser });
+    } catch (err) {
+        res.status(500).json({ error: "Teacher update failed" });
+    }
+});
+
 module.exports = router;

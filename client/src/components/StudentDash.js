@@ -22,6 +22,7 @@ const StudentDash = () => {
   const [inputCode, setInputCode] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // User State
   const [user, setUser] = useState(
@@ -98,6 +99,19 @@ const StudentDash = () => {
         formData,
       );
       const imageUrl = cloudRes.data.secure_url;
+      // Validation check before calling API
+const validateInputs = () => {
+  const nameRegex = /^[A-Za-z\s]+$/;
+  if (!nameRegex.test(user.name) || user.name.length < 3 || user.name.length > 30) {
+    alert("Name must be 3-30 letters only (no numbers/symbols).");
+    return false;
+  }
+  if (user.mobile.length !== 10 || !/^\d+$/.test(user.mobile)) {
+    alert("Mobile number must be exactly 10 digits.");
+    return false;
+  }
+  return true;
+};
 
       // NEW: Save the URL to MongoDB immediately
       const dbRes = await axios.put(
@@ -121,29 +135,50 @@ const StudentDash = () => {
     }
   };
 
-  // 2. FIXED PROFILE TEXT UPDATE
-  const handleProfileUpdate = async () => {
-    try {
-      const res = await axios.put(
-        `https://university-attendance-system-rqyy.onrender.com/api/student/update-profile/${regNo}`,
-        {
-          name: user.name,
-          mobile: user.mobile,
-          profilePhoto: user.profilePhoto,
-        },
+const handleProfileUpdate = async () => {
+  // 1. Strict Validation (Letters for name, 10 digits for mobile)
+  if (!/^[A-Za-z\s]+$/.test(user.name) || user.name.length > 30) {
+    return alert("Invalid Name: Use only letters (Max 30).");
+  }
+  if (user.mobile.length !== 10) {
+    return alert("Mobile must be exactly 10 digits.");
+  }
+
+  setLoading(true);
+  try {
+    let response;
+    
+    if (user.role === "student") {
+      // Students use FormData for potential photo upload
+      const data = new FormData();
+      data.append("name", user.name);
+      data.append("mobile", user.mobile);
+      if (selectedFile) data.append("profilePhoto", selectedFile);
+
+      response = await axios.put(
+        `https://university-attendance-system-rqyy.onrender.com/api/student/update-profile/${user.regNo}`,
+        data
       );
-
-      // Update local state and storage with the fresh data from DB
-      setUser(res.data.user);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-
-      setIsEditing(false);
-      alert(res.data.message);
-    } catch (err) {
-      console.error(err);
-      alert("Update failed. Make sure the server is running.");
+    } else {
+      // Teachers use standard JSON (Fast & Clean)
+      response = await axios.put(
+        `https://university-attendance-system-rqyy.onrender.com/api/teacher/update-profile/${user._id}`,
+        { name: user.name, mobile: user.mobile }
+      );
     }
-  };
+
+    // Update Local Environment
+    setUser(response.data.user);
+    localStorage.setItem("user", JSON.stringify(response.data.user));
+    setIsEditing(false);
+    alert("Profile updated successfully!");
+
+  } catch (err) {
+    alert("Update failed. Please check your connection.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleLogout = () => {
     localStorage.clear();
@@ -313,124 +348,95 @@ const StudentDash = () => {
           </div>
         ) : (
           /* PROFILE VIEW */
-          /* PROFILE VIEW */
-          <div className="max-w-xl mx-auto bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100 text-center animate-in zoom-in duration-500">
-            <div className="relative w-36 h-36 mx-auto mb-8">
-              <div className="w-full h-full bg-indigo-50 rounded-[2.5rem] flex items-center justify-center text-indigo-600 text-5xl font-black overflow-hidden border-4 border-white shadow-xl">
-                {uploading ? (
-                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
-                ) : user.profilePhoto ? (
-                  <img
-                    src={user.profilePhoto}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  user.name?.charAt(0)
-                )}
-              </div>
-              {/* Hidden File Input for Photo */}
-              <input
-                type="file"
-                id="profilePic"
-                className="hidden"
-                onChange={handleImageUpload}
-                accept="image/*"
-              />
-              <label
-                htmlFor="profilePic"
-                className="absolute -bottom-2 -right-2 bg-indigo-600 p-3 rounded-2xl shadow-lg text-white hover:scale-110 transition-transform cursor-pointer border-4 border-white"
-              >
-                <Camera size={20} />
-              </label>
-            </div>
+  <div className="max-w-xl mx-auto bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100 text-center animate-in zoom-in duration-500">
+  <div className="relative w-36 h-36 mx-auto mb-8">
+    <div className="w-full h-full bg-indigo-50 rounded-[2.5rem] flex items-center justify-center text-indigo-600 text-5xl font-black overflow-hidden border-4 border-white shadow-xl">
+      {uploading ? (
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+      ) : user.profilePhoto ? (
+        <img src={user.profilePhoto} alt="Profile" className="w-full h-full object-cover" />
+      ) : (
+        user.name?.charAt(0)
+      )}
+    </div>
+    <input type="file" id="profilePic" className="hidden" onChange={handleImageUpload} accept="image/*" />
+    <label htmlFor="profilePic" className="absolute -bottom-2 -right-2 bg-indigo-600 p-3 rounded-2xl shadow-lg text-white hover:scale-110 transition-transform cursor-pointer border-4 border-white">
+      <Camera size={20} />
+    </label>
+  </div>
 
-            <div className="space-y-6 text-center">
-              {isEditing ? (
-                <div className="space-y-4 text-left">
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 ml-2 uppercase">
-                      Full Name
-                    </label>
-                    <input
-                      className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
-                      value={user.name}
-                      onChange={(e) =>
-                        setUser({ ...user, name: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 ml-2 uppercase">
-                      Mobile Number
-                    </label>
-                    <input
-                      className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
-                      value={user.mobile}
-                      onChange={(e) =>
-                        setUser({ ...user, mobile: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={handleProfileUpdate}
-                      className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-indigo-100"
-                    >
-                      <Save size={20} /> Save Changes
-                    </button>
-                    <button
-                      onClick={() => setIsEditing(false)}
-                      className="px-6 bg-slate-100 text-slate-500 py-4 rounded-2xl font-bold"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div>
-                    <h2 className="text-3xl font-black text-slate-900">
-                      {user.name}
-                    </h2>
-                    <p className="text-indigo-600 font-bold uppercase tracking-[0.2em] text-[10px] mt-1">
-                      Reg No: {regNo}
-                    </p>
-                  </div>
+  <div className="space-y-6 text-center">
+    {isEditing ? (
+      <div className="space-y-4 text-left">
+        <div>
+          <label className="text-[10px] font-black text-slate-400 ml-2 uppercase">Full Name (Letters Only)</label>
+          <input
+            className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
+            value={user.name}
+            maxLength={30}
+            onInput={(e) => e.target.value = e.target.value.replace(/[^A-Za-z\s]/g, '')}
+            onChange={(e) => setUser({ ...user, name: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="text-[10px] font-black text-slate-400 ml-2 uppercase">Mobile Number</label>
+          <input
+            className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
+            value={user.mobile}
+            maxLength={10}
+            onInput={(e) => e.target.value = e.target.value.replace(/\D/g, '')}
+            onChange={(e) => setUser({ ...user, mobile: e.target.value })}
+          />
+        </div>
+        <div className="flex gap-3">
+          <button onClick={handleProfileUpdate} className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
+            <Save size={20} /> Save Changes
+          </button>
+          <button onClick={() => setIsEditing(false)} className="px-6 bg-slate-100 text-slate-500 py-4 rounded-2xl font-bold">Cancel</button>
+        </div>
+      </div>
+    ) : (
+      <>
+        <div>
+          <h2 className="text-3xl font-black text-slate-900 truncate px-4">
+            {user.name}
+          </h2>
+          <p className="text-indigo-600 font-bold uppercase tracking-[0.2em] text-[10px] mt-1">
+            Reg No: {regNo}
+          </p>
+        </div>
 
-                  <div className="bg-slate-50 p-6 rounded-[2rem] text-left space-y-5 border border-slate-100">
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400 font-bold text-xs uppercase tracking-widest">
-                        Email Address
-                      </span>
-                      <span className="font-black text-slate-500 italic text-sm">
-                        {user.email}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400 font-bold text-xs uppercase tracking-widest">
-                        Mobile
-                      </span>
-                      <span className="font-black text-slate-800">
-                        {user.mobile || "Not Provided"}
-                      </span>
-                    </div>
-                  </div>
+        <div className="bg-slate-50 p-6 rounded-[2rem] text-left space-y-5 border border-slate-100 overflow-hidden">
+          <div className="flex justify-between items-center gap-4">
+            <span className="text-slate-400 font-bold text-xs uppercase tracking-widest shrink-0">Email Address</span>
+            <span className="font-black text-slate-500 italic text-sm truncate">{user.email}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-slate-400 font-bold text-xs uppercase tracking-widest">Mobile</span>
+            <span className="font-black text-slate-800">{user.mobile || "Not Provided"}</span>
+          </div>
+        </div>
+        <button onClick={() => setIsEditing(true)} className="w-full flex items-center justify-center gap-2 py-4 text-indigo-600 font-bold bg-indigo-50 rounded-2xl hover:bg-indigo-100 transition-all">
+          <Edit3 size={18} /> Edit Profile Details
+        </button>
+      </>
+    )}
 
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="w-full flex items-center justify-center gap-2 py-4 text-indigo-600 font-bold bg-indigo-50 rounded-2xl hover:bg-indigo-100 transition-all"
-                  >
-                    <Edit3 size={18} /> Edit Profile Details
-                  </button>
-                </>
-              )}
+
+
               <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest pt-4">
                 Administrative records are managed by the faculty.
               </p>
-            </div>
-          </div>
+
+  </div>
+</div>
+
+
+
         )}
+
+
+
       </div>
     </div>
   );

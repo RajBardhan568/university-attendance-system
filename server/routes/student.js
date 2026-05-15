@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require("../models/User");
 const Subject = require("../models/Subject");
 const Attendance = require("../models/Attendance");
+const upload = require('../cloudinaryConfig');
 
 // ==========================================
 // 1. MARK ATTENDANCE
@@ -199,31 +200,24 @@ router.get("/my-stats/:regNo", async (req, res) => {
 });
 
 // ROUTE: Update Student Profile
-router.put('/update-profile/:regNo', async (req, res) => {
+// Students can update Name, Mobile, and Profile Photo
+router.put('/update-profile/:regNo', upload.single('profilePhoto'), async (req, res) => {
     try {
-        const { name, mobile, profilePhoto } = req.body;
-        const { regNo } = req.params;
+        const { name, mobile } = req.body;
+        const updateData = { name, mobile };
 
-        const updatedUser = await User.findOneAndUpdate(
-            { regNo: regNo },
-            { 
-                $set: { 
-                    name: name, 
-                    mobile: mobile, 
-                    profilePhoto: profilePhoto 
-                } 
-            },
-            { new: true } // This returns the updated data back to the frontend
-        );
-
-        if (!updatedUser) {
-            return res.status(404).json({ error: "Student not found" });
+        if (req.file) {
+            updateData.profilePhoto = req.file.path; // Cloudinary URL
         }
 
-        res.json({ message: "Profile updated successfully!", user: updatedUser });
+        const updatedUser = await User.findOneAndUpdate(
+            { regNo: req.params.regNo },
+            { $set: updateData },
+            { new: true }
+        );
+        res.json({ success: true, user: updatedUser });
     } catch (err) {
-        console.error("Update Error:", err);
-        res.status(500).json({ error: "Server error during profile update" });
+        res.status(500).json({ error: "Student update failed" });
     }
 });
 

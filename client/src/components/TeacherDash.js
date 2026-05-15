@@ -60,6 +60,7 @@ const TeacherDash = ({ teacherId }) => {
   const [manualIncrements, setManualIncrements] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResult, setSearchResult] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   // Profile Edit States
   const [isEditing, setIsEditing] = useState(false);
@@ -116,20 +117,20 @@ const TeacherDash = ({ teacherId }) => {
     }
   };
 
-  const handleUpdateProfile = async () => {
-    try {
-      // Assuming you have an update route: /api/auth/update
-      await axios.put(
-        `https://university-attendance-system-rqyy.onrender.com/api/auth/update/${user._id}`,
-        user,
-      );
-      localStorage.setItem("user", JSON.stringify(user));
-      setIsEditing(false);
-      alert("Profile Updated Successfully!");
-    } catch (err) {
-      alert("Update failed");
-    }
-  };
+  // const handleUpdateProfile = async () => {
+  //   try {
+  //     // Assuming you have an update route: /api/auth/update
+  //     await axios.put(
+  //       `https://university-attendance-system-rqyy.onrender.com/api/auth/update/${user._id}`,
+  //       user,
+  //     );
+  //     localStorage.setItem("user", JSON.stringify(user));
+  //     setIsEditing(false);
+  //     alert("Profile Updated Successfully!");
+  //   } catch (err) {
+  //     alert("Update failed");
+  //   }
+  // };
 
   const addSubject = async (e) => {
     e.preventDefault();
@@ -606,75 +607,67 @@ const TeacherDash = ({ teacherId }) => {
           </div>
         ) : (
           /* PROFILE - Responsive layout with Edit */
-          <div className="max-w-xl mx-auto bg-white p-8 md:p-12 rounded-[3rem] shadow-xl border border-slate-100 text-center">
-            <div className="relative w-32 h-32 mx-auto mb-6">
-              <div className="w-full h-full bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-5xl font-black">
-                {user.name?.charAt(0)}
-              </div>
-              <button
-                onClick={() => setIsEditing(!isEditing)}
-                className="absolute bottom-0 right-0 bg-white p-2 rounded-full shadow-lg text-indigo-600 border border-slate-100"
-              >
-                {isEditing ? <X size={20} /> : <Edit3 size={20} />}
-              </button>
-            </div>
+<div className="max-w-xl mx-auto bg-white p-8 md:p-12 rounded-[3rem] shadow-xl border border-slate-100 text-center relative overflow-hidden">
+  <div className="relative w-32 h-32 mx-auto mb-6">
+    <div className="w-full h-full bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-5xl font-black">
+      {user.name?.charAt(0)}
+    </div>
+    <button onClick={() => setIsEditing(!isEditing)} className="absolute bottom-0 right-0 bg-white p-2 rounded-full shadow-lg text-indigo-600 border border-slate-100">
+      {isEditing ? <X size={20} /> : <Edit3 size={20} />}
+    </button>
+  </div>
 
-            {isEditing ? (
-              <div className="space-y-4 text-left">
-                <div>
-                  <label className="text-xs font-black text-slate-400 ml-2">
-                    FULL NAME
-                  </label>
-                  <input
-                    className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500"
-                    value={user.name}
-                    onChange={(e) => setUser({ ...user, name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-black text-slate-400 ml-2">
-                    EMAIL ADDRESS
-                  </label>
-                  <input
-                    className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500"
-                    value={user.email}
-                    onChange={(e) =>
-                      setUser({ ...user, email: e.target.value })
-                    }
-                  />
-                </div>
-                <button
-                  onClick={handleUpdateProfile}
-                  className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2"
-                >
-                  <Save size={20} /> Save Changes
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <h2 className="text-3xl font-black text-slate-900">
-                  {user.name}
-                </h2>
-                <p className="text-indigo-600 font-black uppercase tracking-widest text-xs">
-                  Faculty ID: {teacherId}
-                </p>
-                <div className="bg-slate-50 p-6 rounded-3xl text-left space-y-4 mt-8">
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400 font-bold">Email</span>
-                    <span className="font-black text-slate-700">
-                      {user.email}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400 font-bold">Subjects</span>
-                    <span className="font-black text-slate-700">
-                      {subjects.length}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+  {isEditing ? (
+    <div className="space-y-4 text-left">
+      <div>
+        <label className="text-xs font-black text-slate-400 ml-2">FULL NAME (LETTERS ONLY)</label>
+        <input
+          className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
+          value={user.name}
+          maxLength={30}
+          onInput={(e) => e.target.value = e.target.value.replace(/[^A-Za-z\s]/g, '')}
+          onChange={(e) => setUser({ ...user, name: e.target.value })}
+        />
+      </div>
+      <div>
+        <label className="text-xs font-black text-slate-400 ml-2">MOBILE NUMBER</label>
+        <input
+          className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
+          value={user.mobile}
+          maxLength={10}
+          onInput={(e) => e.target.value = e.target.value.replace(/\D/g, '')}
+          onChange={(e) => setUser({ ...user, mobile: e.target.value })}
+        />
+      </div>
+      <button onClick={handleUpdateProfile} className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
+        <Save size={20} /> Save Changes
+      </button>
+    </div>
+  ) : (
+    <div className="space-y-4">
+      <h2 className="text-3xl font-black text-slate-900 truncate px-4">{user.name}</h2>
+      <p className="text-indigo-600 font-black uppercase tracking-widest text-xs">Faculty ID: {teacherId}</p>
+      
+      <div className="bg-slate-50 p-6 rounded-3xl text-left space-y-4 mt-8 overflow-hidden">
+        <div className="flex justify-between items-center gap-4">
+          <span className="text-slate-400 font-bold shrink-0">Email</span>
+          <span className="font-black text-slate-700 truncate">{user.email}</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-slate-400 font-bold">Mobile</span>
+          <span className="font-black text-slate-700">{user.mobile || "Not Provided"}</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-slate-400 font-bold">Subjects</span>
+          <span className="font-black text-slate-700">{subjects.length}</span>
+        </div>
+      </div>
+    </div>
+  )}
+</div>
+
+
+
         )}
       </div>
     </div>
