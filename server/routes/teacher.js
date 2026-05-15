@@ -36,33 +36,31 @@ router.get("/subject-stats/:subjectId", async (req, res) => {
   try {
     const { subjectId } = req.params;
     
-    // 1. Only get attendance for this subject
+    // 1. Get ALL attendance for this subject
     const attendances = await Attendance.find({ subjectId });
     
-    // 2. Get unique registration numbers from these attendance records
-    const studentRegs = [...new Set(attendances.map(a => a.studentReg))];
+    // 2. Get unique registration numbers from THESE records only
+    const activeRegNos = [...new Set(attendances.map(a => a.studentReg))];
 
-    // 3. Fetch user details only for these active students
-    const stats = await Promise.all(studentRegs.map(async (regNo) => {
+    // 3. Build the response for only these students
+    const stats = await Promise.all(activeRegNos.map(async (regNo) => {
       const user = await User.findOne({ regNo });
-      
-      // Filter records for this specific student
       const myRecords = attendances.filter(a => a.studentReg === regNo);
       
       return {
         regNo: regNo,
-        name: user ? user.name : "Unknown Student",
+        name: user ? user.name : "Unknown",
         attended: myRecords.reduce((sum, r) => sum + (r.count || 0), 0),
-        attendanceRecords: myRecords // Fuel for the Excel dates
+        attendanceRecords: myRecords // This MUST be here for Excel dates
       };
     }));
 
-    // 4. Auto-arrange by Registration Number (Ascending)
+    // Sort by Reg No
     stats.sort((a, b) => a.regNo.localeCompare(b.regNo));
 
     res.json(stats);
   } catch (err) {
-    res.status(500).json({ error: "Stats failed" });
+    res.status(500).json({ error: "Fetch failed" });
   }
 });
 // 4. MANUAL QUANTITY GENERATE CODE

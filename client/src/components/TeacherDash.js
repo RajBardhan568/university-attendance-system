@@ -253,19 +253,20 @@ const downloadReport = async (subject, format) => {
       });
       doc.save(`${subject.subjectName}_Report.pdf`);
 } else if (format === "xlsx") {
-  // 1. Get unique dates with a safety check to avoid "Invalid Date"
+  // 1. Extract and Format Unique Dates
   const allDates = [...new Set(data.flatMap(s => 
-    (s.attendanceRecords || [])
-      .filter(r => r.createdAt) // Only process records with a timestamp
-      .map(r => new Date(r.createdAt).toLocaleDateString('en-GB', {
+    (s.attendanceRecords || []).map(r => {
+      const d = new Date(r.createdAt);
+      return isNaN(d.getTime()) ? null : d.toLocaleDateString('en-GB', {
         day: '2-digit', month: 'short', year: 'numeric'
-      }))
+      });
+    }).filter(Boolean) // Remove nulls
   ))].sort((a, b) => new Date(a) - new Date(b));
 
-  // 2. Prepare Data
+  // 2. Map Matrix Data
   const excelData = data.map((s) => {
-    const totalClasses = subject.totalClasses || 1;
-    const pct = (s.attended / totalClasses) * 100;
+    const total = subject.totalClasses || 1;
+    const pct = (s.attended / total) * 100;
     
     let row = {
       "Registration No": s.regNo,
@@ -276,21 +277,30 @@ const downloadReport = async (subject, format) => {
       "Status": pct >= 75 ? "OK" : "SHORTAGE",
     };
 
-    // 3. Auto-fill previous/skipped classes with 0 (Absent)
+    // Check each date column
     allDates.forEach(date => {
-      const countOnDate = (s.attendanceRecords || []).filter(r => 
-        new Date(r.createdAt).toLocaleDateString('en-GB', {
+      const countOnDate = (s.attendanceRecords || []).filter(r => {
+        const d = new Date(r.createdAt);
+        return d.toLocaleDateString('en-GB', {
           day: '2-digit', month: 'short', year: 'numeric'
-        }) === date
-      ).reduce((sum, r) => sum + (r.count || 0), 0);
+        }) === date;
+      }).reduce((sum, r) => sum + (r.count || 0), 0);
 
       row[date] = countOnDate > 0 ? `${countOnDate} (Present)` : "0 (Absent)";
     });
-
     return row;
   });
 
+  // 3. Generate and Style
   const worksheet = XLSX.utils.json_to_sheet(excelData);
+  
+  // FIX: Force column widths so headers aren't cut off
+  const colWidths = [
+    { wch: 20 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 12 }
+  ];
+  allDates.forEach(() => colWidths.push({ wch: 18 }));
+  worksheet["!cols"] = colWidths;
+
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
   XLSX.writeFile(workbook, `${subject.subjectName}_Attendance.xlsx`);
