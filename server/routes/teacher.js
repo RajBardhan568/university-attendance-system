@@ -35,31 +35,35 @@ router.get("/my-subjects/:teacherId", async (req, res) => {
 router.get("/subject-stats/:subjectId", async (req, res) => {
   try {
     const { subjectId } = req.params;
+    
+    // 1. Get all attendance for this subject
     const attendances = await Attendance.find({ subjectId });
-    // Group by student
-    const studentMap = {};
+    
+    // 2. Get all students enrolled (or just all students)
+    const students = await User.find({ role: 'student' });
 
-    attendances.forEach((att) => {
-      studentMap[att.studentReg] =
-        (studentMap[att.studentReg] || 0) + att.count; // Sum the counts!
+    const stats = students.map(student => {
+      // Find all records matching this student's registration number
+      const studentRecords = attendances.filter(att => att.studentReg === student.regNo);
+      
+      // Sum the 'count' field for the "Obtained" column
+      const totalAttended = studentRecords.reduce((sum, rec) => sum + (rec.count || 0), 0);
+
+      return {
+        regNo: student.regNo,
+        name: student.name,
+        attended: totalAttended,
+        // THIS IS WHAT IS MISSING IN YOUR SCREENSHOT:
+        attendanceRecords: studentRecords 
+      };
     });
 
-    const stats = await Promise.all(
-      Object.keys(studentMap).map(async (regNo) => {
-        const user = await User.findOne({ regNo });
-        return {
-          regNo,
-          name: user ? user.name : "Unknown",
-          attended: studentMap[regNo], // This is the 'Obtained' value
-        };
-      }),
-    );
     res.json(stats);
   } catch (err) {
-    res.status(500).json({ error: "Stats fetch failed" });
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch stats" });
   }
 });
-
 // 4. MANUAL QUANTITY GENERATE CODE
 router.post("/generate-code", async (req, res) => {
   try {

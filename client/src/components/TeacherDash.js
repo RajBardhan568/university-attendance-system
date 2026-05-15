@@ -3,7 +3,21 @@ import axios from "axios";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx"; // Import this at the top
-import {Trash2,Download,Plus,Hash,BookOpen,Search,User,LayoutDashboard,LogOut,Edit3,Save,X,Zap,} from "lucide-react";
+import {
+  Trash2,
+  Download,
+  Plus,
+  Hash,
+  BookOpen,
+  Search,
+  User,
+  LayoutDashboard,
+  LogOut,
+  Edit3,
+  Save,
+  X,
+  Zap,
+} from "lucide-react";
 
 const Timer = ({ expiresAt }) => {
   const [secondsLeft, setSecondsLeft] = useState(0);
@@ -201,85 +215,100 @@ const TeacherDash = ({ teacherId }) => {
     );
   };
 
-  const downloadReport = async (subject, format) => {
-    try {
-      const res = await axios.get(
-        `https://university-attendance-system-rqyy.onrender.com/api/teacher/subject-stats/${subject._id}`,
-      );
-      const data = res.data;
+const downloadReport = async (subject, format) => {
+  try {
+    const res = await axios.get(
+      `https://university-attendance-system-rqyy.onrender.com/api/teacher/subject-stats/${subject._id}`
+    );
+    const data = res.data;
 
-      if (format === "pdf") {
-        const doc = new jsPDF();
-        doc
-          .setFontSize(22)
-          .setTextColor(79, 70, 229)
-          .setFont("helvetica", "bold")
-          .text("ATTENDANCE REPORT", 14, 22);
-        doc.setFontSize(11).setTextColor(80).setFont("helvetica", "normal");
-        doc.text(`Faculty: ${user.name}`, 14, 35);
-        doc.text(
-          `Subject: ${subject.subjectName} | Sem: ${subject.semester}`,
-          14,
-          42,
-        );
-        doc.text(`Total Classes: ${subject.totalClasses}`, 14, 49);
+    if (format === "pdf") {
+      const doc = new jsPDF();
+      doc
+        .setFontSize(22)
+        .setTextColor(79, 70, 229)
+        .setFont("helvetica", "bold")
+        .text("ATTENDANCE REPORT", 14, 22);
+        
+      doc.setFontSize(11).setTextColor(80).setFont("helvetica", "normal");
+      doc.text(`Faculty: ${user.name}`, 14, 35);
+      doc.text(`Subject: ${subject.subjectName} | Sem: ${subject.semester}`, 14, 42);
+      doc.text(`Total Classes: ${subject.totalClasses}`, 14, 49);
 
-        autoTable(doc, {
-          startY: 55,
-          head: [["Reg No", "Name", "Obtained", "Total", "%", "Status"]],
-          body: data.map((s) => {
-            const pct = (s.attended / subject.totalClasses) * 100;
-            return [
-              s.regNo,
-              s.name,
-              s.attended,
-              subject.totalClasses,
-              `${pct.toFixed(1)}%`,
-              pct >= 75 ? "OK" : "SHORTAGE",
-            ];
-          }),
-          headStyles: { fillColor: [79, 70, 229] },
+      autoTable(doc, {
+        startY: 55,
+        head: [["Reg No", "Name", "Obtained", "Total", "%", "Status"]],
+        body: data.map((s) => {
+          const pct = (s.attended / (subject.totalClasses || 1)) * 100;
+          return [
+            s.regNo,
+            s.name,
+            s.attended,
+            subject.totalClasses,
+            `${pct.toFixed(1)}%`,
+            pct >= 75 ? "OK" : "SHORTAGE",
+          ];
+        }),
+        headStyles: { fillColor: [79, 70, 229] },
+      });
+      doc.save(`${subject.subjectName}_Report.pdf`);
+
+    } else if (format === "xlsx") { // FIX 1: Changed "elseif" to "else if"
+      
+      // 1. Get all unique dates
+      const allDates = [...new Set(data.flatMap(s => 
+        (s.attendanceRecords || []).map(r => new Date(r.createdAt).toLocaleDateString('en-US', {
+          month: 'short', day: 'numeric', year: 'numeric'
+        }))
+      ))].sort((a, b) => new Date(a) - new Date(b));
+
+      // 2. Prepare the Matrix Data
+      const excelData = data.map((s) => {
+        const pct = (s.attended / (subject.totalClasses || 1)) * 100;
+        
+        let row = {
+          "Registration No": s.regNo,
+          "Student Name": s.name,
+          "Classes Attended": s.attended,
+          "Total Classes": subject.totalClasses,
+          "Percentage": `${pct.toFixed(1)}%`,
+          "Status": pct >= 75 ? "OK" : "SHORTAGE",
+        };
+
+        allDates.forEach(date => {
+          const countOnDate = (s.attendanceRecords || []).filter(r => 
+            new Date(r.createdAt).toLocaleDateString('en-US', {
+              month: 'short', day: 'numeric', year: 'numeric'
+            }) === date
+          ).length;
+
+          row[date] = countOnDate > 0 ? `${countOnDate} (Present)` : "0 (Absent)";
         });
-        doc.save(`${subject.subjectName}_Report.pdf`);
-      } else if (format === "xlsx") {
-        // Prepare data specifically for Excel
-        const excelData = data.map((s) => {
-          const pct = (s.attended / subject.totalClasses) * 100;
-          return {
-            "Registration No": s.regNo,
-            "Student Name": s.name,
-            "Classes Attended": s.attended,
-            "Total Classes": subject.totalClasses,
-            Percentage: `${pct.toFixed(1)}%`,
-            Status: pct >= 75 ? "OK" : "SHORTAGE",
-          };
-        });
 
-        const worksheet = XLSX.utils.json_to_sheet(excelData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
+        return row;
+      });
 
-        // Auto-size columns for better look
-        const maxWidth = excelData.reduce(
-          (w, r) => Math.max(w, r["Student Name"].length),
-          10,
-        );
-        worksheet["!cols"] = [
-          { wch: 15 },
-          { wch: maxWidth + 5 },
-          { wch: 15 },
-          { wch: 15 },
-          { wch: 12 },
-          { wch: 12 },
-        ];
+      // 3. Generate the Sheet
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance Matrix");
 
-        XLSX.writeFile(workbook, `${subject.subjectName}_Attendance.xlsx`);
+      // 4. Auto-size columns
+      if (excelData.length > 0) {
+        const colWidths = Object.keys(excelData[0]).map(key => ({
+          wch: Math.max(key.length, 15)
+        }));
+        worksheet["!cols"] = colWidths;
       }
-    } catch (error) {
-      console.error(error);
-      alert("Error downloading report");
-    }
-  };
+
+      XLSX.writeFile(workbook, `${subject.subjectName}_Attendance_Matrix.xlsx`);
+    } // FIX 2: Added missing closing brace for 'else if'
+
+  } catch (error) { // FIX 3: Balanced the try-catch block
+    console.error(error);
+    alert("Error downloading report");
+  }
+};
 
   return (
     <div className="min-h-screen bg-[#f8fafc] p-4 md:p-10">
@@ -591,28 +620,29 @@ const TeacherDash = ({ teacherId }) => {
                         <option value="50">50m</option>
                       </select>
 
-{/* 3. The Generate Button (Full Width, No Overlap) */}
-  <button
-    disabled={generatingMap[sub._id]}
-    onClick={() => generateCode(sub._id)}
-    className={`w-full py-3 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-3 border-2 
-      ${generatingMap[sub._id] 
-        ? 'bg-indigo-50 border-indigo-100 text-indigo-300 cursor-not-allowed' 
-        : 'bg-indigo-600 border-indigo-600 text-white hover:bg-white hover:text-indigo-600 hover:shadow-lg hover:shadow-indigo-100 active:scale-95 shadow-lg shadow-indigo-100'}`}
-  >
-    {generatingMap[sub._id] ? (
-      <>
-        <div className="w-3 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
-        <span>Securing..</span>
-      </>
-    ) : (
-      <>
-        <Zap size={20} fill="currentColor" />
-        <span>Generate Code</span>
-      </>
-    )}
-  </button>
-                      
+                      {/* 3. The Generate Button (Full Width, No Overlap) */}
+                      <button
+                        disabled={generatingMap[sub._id]}
+                        onClick={() => generateCode(sub._id)}
+                        className={`w-full py-3 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-3 border-2 
+      ${
+        generatingMap[sub._id]
+          ? "bg-indigo-50 border-indigo-100 text-indigo-300 cursor-not-allowed"
+          : "bg-indigo-600 border-indigo-600 text-white hover:bg-white hover:text-indigo-600 hover:shadow-lg hover:shadow-indigo-100 active:scale-95 shadow-lg shadow-indigo-100"
+      }`}
+                      >
+                        {generatingMap[sub._id] ? (
+                          <>
+                            <div className="w-3 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                            <span>Securing..</span>
+                          </>
+                        ) : (
+                          <>
+                            <Zap size={20} fill="currentColor" />
+                            <span>Generate Code</span>
+                          </>
+                        )}
+                      </button>
                     </div>
 
                     {/* UPDATE: EXPORT DATA SECTION (Merged inside the loop, using 'sub') */}
