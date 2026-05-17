@@ -3,6 +3,8 @@ const router = express.Router();
 const Subject = require("../models/Subject");
 const Attendance = require("../models/Attendance");
 const User = require("../models/User");
+const Session = require('../models/Session');
+
 // 1. CREATE SUBJECT (Added branch support)
 router.post("/add-subject", async (req, res) => {
   try {
@@ -32,50 +34,50 @@ router.get("/my-subjects/:teacherId", async (req, res) => {
 });
 
 // 2. DOWNLOAD DATA - Matrix Layout fixing the hidden Mongoose properties issue
+
 router.get("/subject-stats/:subjectId", async (req, res) => {
   try {
     const { subjectId } = req.params;
     
-    // 1. Get ALL attendance for this subject (.lean() converts documents into pure, readable JSON objects)
+    // 1. Get ALL attendance marks for this subject
     const attendances = await Attendance.find({ subjectId }).lean();
     
-    // 2. Get unique registration numbers from THESE records only
+    // 2. Get ALL sessions (generated codes) held for this subject
+    const sessions = await Session.find({ subjectId }).lean();
+    
+    // 3. Only get active student users who have marked at least once for this subject
     const activeRegNos = [...new Set(attendances.map(a => a.studentReg))];
 
-    // 3. Build the response for only these students
     const stats = await Promise.all(activeRegNos.map(async (regNo) => {
-      // Using .lean() here too for clean, raw data performance
-      const user = await User.findOne({ regNo }).lean(); 
-      const myRecords = attendances.filter(a => a.studentReg === regNo);
+      const user = await User.findOne({ regNo }).lean();
+      const studentRecords = attendances.filter(a => a.studentReg === regNo);
       
       return {
         regNo: regNo,
         name: user ? user.name : "Unknown",
-        attended: myRecords.reduce((sum, r) => sum + (r.count || 0), 0),
-        // Now this is a pure JSON array that React/XLSX can easily parse for timestamps
-        attendanceRecords: myRecords 
+        attended: studentRecords.reduce((sum, r) => sum + (r.count || 0), 0),
+        attendanceRecords: studentRecords, // Student history links here
       };
     }));
 
-    // Sort by Reg No
     stats.sort((a, b) => a.regNo.localeCompare(b.regNo));
 
-    res.json(stats);
+    // Send both stats and the global session history to the frontend
+    res.json({ stats, sessions });
   } catch (err) {
-    console.error("Backend matrix generation error:", err);
     res.status(500).json({ error: "Fetch failed" });
   }
 });
 // 4. MANUAL QUANTITY GENERATE CODE
+// 4. MANUAL QUANTITY GENERATE CODE
 router.post("/generate-code", async (req, res) => {
   try {
-    const {subjectId, incrementBy, teacherLat,teacherLng,timeLimit,rangeLimit,} = req.body;
+    const { subjectId, incrementBy, teacherLat, teacherLng, timeLimit, rangeLimit } = req.body;
 
     // 1. Generate the new 6-character code
     const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
     // 2. Handle Dynamic Expiry Logic
-    // Converts the user selection (e.g., 2) into a real future timestamp
     const minutesToAdd = Number(timeLimit) || 5;
     const expiryDate = new Date(Date.now() + minutesToAdd * 60 * 1000);
 
@@ -97,12 +99,26 @@ router.post("/generate-code", async (req, res) => {
           totalClasses: Number(incrementBy) || 1,
         },
       },
-      { new: true, runValidators: true } // runValidators ensures data types are correct
+      { new: true, runValidators: true } 
     );
 
     if (!updatedSubject) {
       return res.status(404).json({ error: "Subject not found" });
     }
+
+    // ==========================================
+    // NEW ADDITION: Save the instance as an absolute session track
+    // This logs the class session right here, even if 0 students sign in!
+    // ==========================================
+    const Session = require("../models/Session"); // Import your Session model
+    const newSession = new Session({
+      subjectId: subjectId,
+      code: newCode,
+      createdAt: new Date(),
+      weight: Number(incrementBy) || 1 // Stores if it was a single or double class entry
+    });
+    await newSession.save();
+    // ==========================================
 
     // 4. Success Response
     res.json({
@@ -110,7 +126,7 @@ router.post("/generate-code", async (req, res) => {
       updatedSubject,
     });
     
-    console.log(`[SUCCESS] New Session: ${updatedSubject.subjectName} | Code: ${newCode} | Range: ${rangeLimit}m | Expires in: ${minutesToAdd}min`);
+    console.log(`[SUCCESS] New Session Saved to DB: ${updatedSubject.subjectName} | Code: ${newCode} | Range: ${rangeLimit}m | Expires in: ${minutesToAdd}min`);
 
   } catch (err) {
     console.error("GENERATE ERROR:", err);
@@ -206,5 +222,8 @@ router.put('/update-profile/:id', async (req, res) => {
         res.status(500).json({ error: "Teacher update failed" });
     }
 });
+
+
+
 
 module.exports = router;

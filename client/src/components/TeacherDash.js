@@ -220,7 +220,9 @@ const downloadReport = async (subject, format) => {
     const res = await axios.get(
       `https://university-attendance-system-rqyy.onrender.com/api/teacher/subject-stats/${subject._id}`
     );
-    const data = res.data;
+    
+    // FIX 1: Destructure stats and sessions from the new backend payload
+    const { stats, sessions } = res.data;
 
     if (format === "pdf") {
       const doc = new jsPDF();
@@ -235,10 +237,11 @@ const downloadReport = async (subject, format) => {
       doc.text(`Subject: ${subject.subjectName} | Sem: ${subject.semester}`, 14, 42);
       doc.text(`Total Classes: ${subject.totalClasses}`, 14, 49);
 
+      // FIX 2: Use stats array for the PDF rows
       autoTable(doc, {
         startY: 55,
         head: [["Reg No", "Name", "Obtained", "Total", "%", "Status"]],
-        body: data.map((s) => {
+        body: stats.map((s) => {
           const pct = (s.attended / (subject.totalClasses || 1)) * 100;
           return [
             s.regNo,
@@ -252,66 +255,67 @@ const downloadReport = async (subject, format) => {
         headStyles: { fillColor: [79, 70, 229] },
       });
       doc.save(`${subject.subjectName}_Report.pdf`);
-} else if (format === "xlsx") {
-  console.log("Raw Data from Backend:", data);
 
-  // 1. Extract Unique Dates checking BOTH 'createdAt' and 'date' fields
-  const allDates = [...new Set(data.flatMap(s => 
-    (s.attendanceRecords || []).map(r => {
-      // Check r.createdAt first, fallback to r.date
-      const rawDate = r.createdAt || r.date; 
-      if (!rawDate) return null;
+    } else if (format === "xlsx") {
+      console.log("Sessions from Backend:", sessions);
+      console.log("Stats from Backend:", stats);
 
-      const d = new Date(rawDate);
-      return isNaN(d.getTime()) ? null : d.toLocaleDateString('en-GB', {
-        day: '2-digit', month: 'short', year: 'numeric'
-      });
-    }).filter(Boolean)
-  ))].sort((a, b) => new Date(a) - new Date(b));
+      // FIX 3: Pull unique dates from the global 'sessions' array instead of student attendance
+      const allDates = [...new Set((sessions || []).map(s => {
+        const rawDate = s.createdAt || s.date; 
+        if (!rawDate) return null;
 
-  // 2. Map Matrix Data
-  const excelData = data.map((s) => {
-    let row = {
-      "Registration No": s.regNo,
-      "Student Name": s.name,
-      "Classes Attended": s.attended,
-      "Total Classes": subject.totalClasses,
-      "Percentage": `${((s.attended / (subject.totalClasses || 1)) * 100).toFixed(1)}%`,
-      "Status": (s.attended / (subject.totalClasses || 1)) * 100 >= 75 ? "OK" : "SHORTAGE",
-    };
-
-    // Fill each date column
-    allDates.forEach(date => {
-      const recordsOnDate = (s.attendanceRecords || []).filter(r => {
-        const rawDate = r.createdAt || r.date;
-        if (!rawDate) return false;
-        
-        return new Date(rawDate).toLocaleDateString('en-GB', {
+        const d = new Date(rawDate);
+        return isNaN(d.getTime()) ? null : d.toLocaleDateString('en-GB', {
           day: '2-digit', month: 'short', year: 'numeric'
-        }) === date;
+        });
+      }).filter(Boolean))].sort((a, b) => new Date(a) - new Date(b));
+
+      // FIX 4: Build rows by mapping over the 'stats' array
+      const excelData = stats.map((s) => {
+        let row = {
+          "Registration No": s.regNo,
+          "Student Name": s.name,
+          "Classes Attended": s.attended,
+          "Total Classes": subject.totalClasses,
+          "Percentage": `${((s.attended / (subject.totalClasses || 1)) * 100).toFixed(1)}%`,
+          "Status": (s.attended / (subject.totalClasses || 1)) * 100 >= 75 ? "OK" : "SHORTAGE",
+        };
+
+        // Check if student has a matching record for each generated class session date
+        allDates.forEach(date => {
+          const recordsOnDate = (s.attendanceRecords || []).filter(r => {
+            const rawDate = r.createdAt || r.date;
+            if (!rawDate) return false;
+            
+            return new Date(rawDate).toLocaleDateString('en-GB', {
+              day: '2-digit', month: 'short', year: 'numeric'
+            }) === date;
+          });
+          
+          const count = recordsOnDate.reduce((sum, r) => sum + (r.count || 0), 0);
+          
+          // If match found, use count, otherwise automatically fill with 0 (Absent)
+          row[date] = count > 0 ? `${count} (Present)` : "0 (Absent)";
+        });
+
+        return row;
       });
+
+      // 3. Generate Sheet
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
       
-      const count = recordsOnDate.reduce((sum, r) => sum + (r.count || 0), 0);
-      row[date] = count > 0 ? `${count} (Present)` : "0 (Absent)";
-    });
+      const colWidths = [
+        { wch: 20 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 12 }
+      ];
+      allDates.forEach(() => colWidths.push({ wch: 18 }));
+      worksheet["!cols"] = colWidths;
 
-    return row;
-  });
-
-  // 3. Generate Sheet
-  const worksheet = XLSX.utils.json_to_sheet(excelData);
-  
-  const colWidths = [
-    { wch: 20 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 12 }
-  ];
-  allDates.forEach(() => colWidths.push({ wch: 18 }));
-  worksheet["!cols"] = colWidths;
-
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance Report");
-  XLSX.writeFile(workbook, `${subject.subjectName}_Matrix_Report.xlsx`);
-}
-  } catch (error) { // FIX 3: Balanced the try-catch block
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance Report");
+      XLSX.writeFile(workbook, `${subject.subjectName}_Matrix_Report.xlsx`);
+    }
+  } catch (error) {
     console.error(error);
     alert("Error downloading report");
   }
