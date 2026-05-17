@@ -13,10 +13,12 @@ const SubjectSchema = new mongoose.Schema({
     totalClasses: { type: Number, default: 0 },
     teacherLat: { type: Number, default: 0 },
     teacherLng: { type: Number, default: 0 },
+    session: { type: String, required: true },
     // Add these to your SubjectSchema
 rangeLimit: { type: Number, default: 20 }, // in meters
-timeLimit: { type: Number, default: 5 }     // in minutes
-});
+timeLimit: { type: Number, default: 5 },     // in minutes
+createdAt: { type: Date, default: Date.now } ,
+},  {timestamps: true });
 
 // This prevents the "Cannot overwrite model once compiled" error
 module.exports = mongoose.models.Subject || mongoose.model("Subject", SubjectSchema);

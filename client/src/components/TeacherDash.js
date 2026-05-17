@@ -71,6 +71,8 @@ const TeacherDash = ({ teacherId }) => {
   const [todayCounts, setTodayCounts] = useState({});
   const [selectedRange, setSelectedRange] = useState({});
   const [selectedTime, setSelectedTime] = useState({});
+
+  const [session, setSession] = useState("");
   const fetchSessionCount = async (subjectId) => {
     try {
       // Updated URL to match the new session-count route
@@ -155,13 +157,15 @@ const TeacherDash = ({ teacherId }) => {
         "https://university-attendance-system-rqyy.onrender.com/api/teacher/add-subject",
         {
           subjectName: subjectForm.name,
-          semester: subjectForm.sem,
           branch: subjectForm.branch,
+          semester: subjectForm.sem,
+          session: subjectForm.session,
           teacherId,
         },
       );
       setSubjects([...subjects, res.data]);
-      setSubjectForm({ name: "", branch: "", sem: "" });
+      setSubjectForm({ name: "", branch: "", sem: "", session: "" });
+      alert("Subject added successfully!");
     } catch (err) {
       alert("Error adding subject");
     }
@@ -215,111 +219,131 @@ const TeacherDash = ({ teacherId }) => {
     );
   };
 
-const downloadReport = async (subject, format) => {
-  try {
-    const res = await axios.get(
-      `https://university-attendance-system-rqyy.onrender.com/api/teacher/subject-stats/${subject._id}`
-    );
-    
-    // FIX 1: Destructure stats and sessions from the new backend payload
-    const { stats, sessions } = res.data;
+  const downloadReport = async (subject, format) => {
+    try {
+      const res = await axios.get(
+        `https://university-attendance-system-rqyy.onrender.com/api/teacher/subject-stats/${subject._id}`,
+      );
 
-   if (format === "pdf") {
-      const doc = new jsPDF();
-      doc
-        .setFontSize(22)
-        .setTextColor(79, 70, 229)
-        .setFont("helvetica", "bold")
-        .text("ATTENDANCE REPORT", 14, 22);
-        
-      doc.setFontSize(11).setTextColor(80).setFont("helvetica", "normal");
-      doc.text(`Faculty: ${currentUser?.name || "Faculty"}`, 14, 35);
-      doc.text(`Subject: ${subject.subjectName} | Sem: ${subject.semester}`, 14, 42);
-      doc.text(`Total Classes: ${subject.totalClasses}`, 14, 49);
+      const { stats, sessions } = res.data;
 
-      autoTable(doc, {
-        startY: 55,
-        head: [["Reg No", "Name", "Obtained", "Total", "%", "Status"]],
-        body: (stats || []).map((s) => {
-          const pct = (s.attended / (subject.totalClasses || 1)) * 100;
-          return [
-            s.regNo,
-            s.name,
-            s.attended,
-            subject.totalClasses,
-            `${pct.toFixed(1)}%`,
-            pct >= 75 ? "OK" : "SHORTAGE",
-          ];
-        }),
-        headStyles: { fillColor: [79, 70, 229] },
-      });
-      doc.save(`${subject.subjectName}_Report.pdf`);
-    
+      if (format === "pdf") {
+        const doc = new jsPDF();
+        doc
+          .setFontSize(22)
+          .setTextColor(79, 70, 229)
+          .setFont("helvetica", "bold")
+          .text("ATTENDANCE REPORT", 14, 22);
 
-    } else if (format === "xlsx") {
-      console.log("Sessions from Backend:", sessions);
-      console.log("Stats from Backend:", stats);
+        doc.setFontSize(11).setTextColor(80).setFont("helvetica", "normal");
+        doc.text(`Faculty: ${currentUser?.name || "Faculty"}`, 14, 35);
+        doc.text(
+          `Subject: ${subject.subjectName} | Sem: ${subject.semester}`,
+          14,
+          42,
+        );
+        doc.text(`Total Classes: ${subject.totalClasses}`, 14, 49);
 
-      // FIX 3: Pull unique dates from the global 'sessions' array instead of student attendance
-      const allDates = [...new Set((sessions || []).map(s => {
-        const rawDate = s.createdAt || s.date; 
-        if (!rawDate) return null;
-
-        const d = new Date(rawDate);
-        return isNaN(d.getTime()) ? null : d.toLocaleDateString('en-GB', {
-          day: '2-digit', month: 'short', year: 'numeric'
+        autoTable(doc, {
+          startY: 55,
+          head: [["Reg No", "Name", "Obtained", "Total", "%", "Status"]],
+          body: (stats || []).map((s) => {
+            const pct = (s.attended / (subject.totalClasses || 1)) * 100;
+            return [
+              s.regNo,
+              s.name,
+              s.attended,
+              subject.totalClasses,
+              `${pct.toFixed(1)}%`,
+              pct >= 75 ? "OK" : "SHORTAGE",
+            ];
+          }),
+          headStyles: { fillColor: [79, 70, 229] },
         });
-      }).filter(Boolean))].sort((a, b) => new Date(a) - new Date(b));
+        doc.save(`${subject.subjectName}_Report.pdf`);
+      } else if (format === "xlsx") {
+        console.log("Sessions from Backend:", sessions);
+        console.log("Stats from Backend:", stats);
 
-      // FIX 4: Build rows by mapping over the 'stats' array
-      const excelData = stats.map((s) => {
-        let row = {
-          "Registration No": s.regNo,
-          "Student Name": s.name,
-          "Classes Attended": s.attended,
-          "Total Classes": subject.totalClasses,
-          "Percentage": `${((s.attended / (subject.totalClasses || 1)) * 100).toFixed(1)}%`,
-          "Status": (s.attended / (subject.totalClasses || 1)) * 100 >= 75 ? "OK" : "SHORTAGE",
-        };
+        const allDates = [
+          ...new Set(
+            (sessions || [])
+              .map((s) => {
+                const rawDate = s.createdAt || s.date;
+                if (!rawDate) return null;
 
-        // Check if student has a matching record for each generated class session date
-        allDates.forEach(date => {
-          const recordsOnDate = (s.attendanceRecords || []).filter(r => {
-            const rawDate = r.createdAt || r.date;
-            if (!rawDate) return false;
-            
-            return new Date(rawDate).toLocaleDateString('en-GB', {
-              day: '2-digit', month: 'short', year: 'numeric'
-            }) === date;
+                const d = new Date(rawDate);
+                return isNaN(d.getTime())
+                  ? null
+                  : d.toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    });
+              })
+              .filter(Boolean),
+          ),
+        ].sort((a, b) => new Date(a) - new Date(b));
+
+        const excelData = (stats || []).map((s) => {
+          let row = {
+            "Registration No": s.regNo,
+            "Student Name": s.name,
+            "Classes Attended": s.attended,
+            "Total Classes": subject.totalClasses,
+            Percentage: `${((s.attended / (subject.totalClasses || 1)) * 100).toFixed(1)}%`,
+            Status:
+              (s.attended / (subject.totalClasses || 1)) * 100 >= 75
+                ? "OK"
+                : "SHORTAGE",
+          };
+
+          allDates.forEach((date) => {
+            const recordsOnDate = (s.attendanceRecords || []).filter((r) => {
+              const rawDate = r.createdAt || r.date;
+              if (!rawDate) return false;
+
+              return (
+                new Date(rawDate).toLocaleDateString("en-GB", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                }) === date
+              );
+            });
+
+            const count = recordsOnDate.reduce(
+              (sum, r) => sum + (r.count || 0),
+              0,
+            );
+            row[date] = count > 0 ? `${count} (Present)` : "0 (Absent)";
           });
-          
-          const count = recordsOnDate.reduce((sum, r) => sum + (r.count || 0), 0);
-          
-          // If match found, use count, otherwise automatically fill with 0 (Absent)
-          row[date] = count > 0 ? `${count} (Present)` : "0 (Absent)";
+
+          return row;
         });
 
-        return row;
-      });
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
 
-      // 3. Generate Sheet
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
-      
-      const colWidths = [
-        { wch: 20 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 12 }
-      ];
-      allDates.forEach(() => colWidths.push({ wch: 18 }));
-      worksheet["!cols"] = colWidths;
+        const colWidths = [
+          { wch: 20 },
+          { wch: 25 },
+          { wch: 15 },
+          { wch: 15 },
+          { wch: 12 },
+          { wch: 12 },
+        ];
+        allDates.forEach(() => colWidths.push({ wch: 18 }));
+        worksheet["!cols"] = colWidths;
 
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance Report");
-      XLSX.writeFile(workbook, `${subject.subjectName}_Matrix_Report.xlsx`);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance Report");
+        XLSX.writeFile(workbook, `${subject.subjectName}_Matrix_Report.xlsx`);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Error downloading report");
     }
-  } catch (error) {
-    console.error(error);
-    alert("Error downloading report");
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-[#f8fafc] p-4 md:p-10">
@@ -497,6 +521,19 @@ const downloadReport = async (subject, format) => {
                       }
                       required
                     />
+                    <input
+                      className="w-full p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500"
+                      placeholder="Session (e.g., 2022-2026)"
+                      value={subjectForm.session}
+                      onChange={(e) =>
+                        setSubjectForm({
+                          ...subjectForm,
+                          session: e.target.value,
+                        })
+                      }
+                      required
+                    />
+
                     <button className="w-full bg-indigo-600 text-white p-4 rounded-2xl font-bold shadow-lg shadow-indigo-100">
                       Add Subject
                     </button>
@@ -541,9 +578,15 @@ const downloadReport = async (subject, format) => {
                     <h3 className="text-xl font-black text-slate-800">
                       {sub.subjectName}
                     </h3>
-                    <p className="text-sm font-bold text-slate-400 mb-4">
-                      {sub.branch} • Sem {sub.semester}
-                    </p>
+                    <div className="flex items-center gap-3 text-xs font-bold text-slate-400 mb-4">
+                      <span>{sub.branch}</span>
+                      <span className="text-slate-200 font-normal">|</span>
+                      <span>Sem {sub.semester}</span>
+                      <span className="text-slate-200 font-normal">|</span>
+                      <span className="text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md font-extrabold text-[11px]">
+                        Session {sub.session || "2022-2026"}
+                      </span>
+                    </div>
 
                     <div className="bg-slate-50 p-4 rounded-3xl text-center mb-6">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -596,8 +639,10 @@ const downloadReport = async (subject, format) => {
                         }
                       />
                       {/* TIME DROPDOWN */}
+                      <div className="flex flex-col gap-1">
+<span className="text-[9px] font-black text-slate-400 uppercase px-1">Time</span>
                       <select
-                        className="bg-slate-50 p-2 rounded-xl text-[10px] font-bold border border-slate-100 outline-none"
+className="bg-slate-50 p-2 rounded-xl text-[10px] font-bold border border-slate-100 outline-none"
                         value={selectedTime[sub._id] || "5"}
                         onChange={(e) =>
                           setSelectedTime({
@@ -610,11 +655,13 @@ const downloadReport = async (subject, format) => {
                         <option value="5">5 min</option>
                         <option value="10">10 min</option>
                       </select>
+                      </div>
                       {/* RANGE DROPDOWN */}
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[9px] font-black text-slate-400 uppercase px-1">Range</span>
                       <select
                         className="bg-slate-50 p-2 rounded-xl text-[10px] font-bold border border-slate-100 outline-none"
                         // 1. Link to state
-
                         value={selectedRange[sub._id] || "20"}
                         // 2. Update state when changed
 
@@ -630,7 +677,7 @@ const downloadReport = async (subject, format) => {
                         <option value="20">20m</option>
                         <option value="50">50m</option>
                       </select>
-
+</div>
                       {/* 3. The Generate Button (Full Width, No Overlap) */}
                       <button
                         disabled={generatingMap[sub._id]}
@@ -655,7 +702,17 @@ const downloadReport = async (subject, format) => {
                         )}
                       </button>
                     </div>
-
+                    {/* subject date created */}
+                    <span className="text-[10px] text-slate-400 italic mt-1">
+                      Created on:{" "}
+                      {sub.createdAt
+                        ? new Date(sub.createdAt).toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : "18 May 2026"}
+                    </span>
                     {/* UPDATE: EXPORT DATA SECTION (Merged inside the loop, using 'sub') */}
                     <div className="mt-6 pt-6 border-t border-slate-100">
                       <p className="text-[10px] font-black text-slate-400 uppercase mb-3">
