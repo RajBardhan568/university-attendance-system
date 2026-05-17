@@ -120,6 +120,19 @@ const TeacherDash = ({ teacherId }) => {
     }
   };
 
+  const handleLogout = () => {
+  // Pop up a confirmation dialog box
+  const isConfirmed = window.confirm("Are you sure you want to logout?");
+  
+  // If the user clicks "OK", clear data and redirect
+  if (isConfirmed) {
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    // If you are using React Router use: navigate("/login");
+    window.location.href = "/login"; 
+  }
+  // If they click "Cancel", nothing happens and they stay logged in
+};
   // Simplified Update for Teacher (Name + Mobile Only)
   const handleUpdateProfile = async () => {
     // 1. Validations
@@ -373,15 +386,15 @@ const TeacherDash = ({ teacherId }) => {
             >
               My Profile
             </button>
-            <button
-              onClick={() => {
-                localStorage.clear();
-                window.location.href = "/";
-              }}
-              className="text-red-500 flex items-center gap-2 bg-red-50 px-4 py-2 rounded-xl"
-            >
-              <LogOut size={16} /> Logout
-            </button>
+<button 
+  onClick={handleLogout}
+  className="flex items-center gap-2 text-sm font-bold text-rose-600 hover:bg-rose-50 p-3 rounded-2xl w-full transition-all"
+>
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+  </svg>
+  Logout
+</button>
           </div>
         </nav>
 

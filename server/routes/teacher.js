@@ -8,11 +8,12 @@ const Session = require('../models/Session');
 // 1. CREATE SUBJECT (Added branch support)
 router.post("/add-subject", async (req, res) => {
   try {
-    const { subjectName, semester, branch, teacherId } = req.body;
+    const { subjectName, semester, branch, session, teacherId } = req.body;
     const newSubject = new Subject({
       subjectName,
       semester,
       branch,
+      session,
       teacherId,
     });
     await newSubject.save();
