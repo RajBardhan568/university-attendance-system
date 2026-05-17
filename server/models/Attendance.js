@@ -13,8 +13,7 @@ const AttendanceSchema = new mongoose.Schema({
     location: {
         lat: Number,
         lng: Number
-    },
-
-});
+    }, 
+}, {timestamps: true });
 
 module.exports = mongoose.models.Attendance || mongoose.model('Attendance', AttendanceSchema);
