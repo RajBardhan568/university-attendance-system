@@ -231,7 +231,7 @@ const downloadReport = async (subject, format) => {
         .text("ATTENDANCE REPORT", 14, 22);
         
       doc.setFontSize(11).setTextColor(80).setFont("helvetica", "normal");
-      doc.text(`Faculty: ${currentUser?.name || "Faculty"}`, 14, 35);
+      doc.text(`Faculty: ${user.name}`, 14, 35);
       doc.text(`Subject: ${subject.subjectName} | Sem: ${subject.semester}`, 14, 42);
       doc.text(`Total Classes: ${subject.totalClasses}`, 14, 49);
 
@@ -253,54 +253,48 @@ const downloadReport = async (subject, format) => {
       });
       doc.save(`${subject.subjectName}_Report.pdf`);
 } else if (format === "xlsx") {
-  console.log("Raw Data from Backend:", data);
-
-  // 1. Extract Unique Dates checking BOTH 'createdAt' and 'date' fields
+  // 1. Extract and Format Unique Dates
   const allDates = [...new Set(data.flatMap(s => 
     (s.attendanceRecords || []).map(r => {
-      // Check r.createdAt first, fallback to r.date
-      const rawDate = r.createdAt || r.date; 
-      if (!rawDate) return null;
-
-      const d = new Date(rawDate);
+      const d = new Date(r.createdAt);
       return isNaN(d.getTime()) ? null : d.toLocaleDateString('en-GB', {
         day: '2-digit', month: 'short', year: 'numeric'
       });
-    }).filter(Boolean)
+    }).filter(Boolean) // Remove nulls
   ))].sort((a, b) => new Date(a) - new Date(b));
 
   // 2. Map Matrix Data
   const excelData = data.map((s) => {
+    const total = subject.totalClasses || 1;
+    const pct = (s.attended / total) * 100;
+    
     let row = {
       "Registration No": s.regNo,
       "Student Name": s.name,
       "Classes Attended": s.attended,
       "Total Classes": subject.totalClasses,
-      "Percentage": `${((s.attended / (subject.totalClasses || 1)) * 100).toFixed(1)}%`,
-      "Status": (s.attended / (subject.totalClasses || 1)) * 100 >= 75 ? "OK" : "SHORTAGE",
+      "Percentage": `${pct.toFixed(1)}%`,
+      "Status": pct >= 75 ? "OK" : "SHORTAGE",
     };
 
-    // Fill each date column
+    // Check each date column
     allDates.forEach(date => {
-      const recordsOnDate = (s.attendanceRecords || []).filter(r => {
-        const rawDate = r.createdAt || r.date;
-        if (!rawDate) return false;
-        
-        return new Date(rawDate).toLocaleDateString('en-GB', {
+      const countOnDate = (s.attendanceRecords || []).filter(r => {
+        const d = new Date(r.createdAt);
+        return d.toLocaleDateString('en-GB', {
           day: '2-digit', month: 'short', year: 'numeric'
         }) === date;
-      });
-      
-      const count = recordsOnDate.reduce((sum, r) => sum + (r.count || 0), 0);
-      row[date] = count > 0 ? `${count} (Present)` : "0 (Absent)";
-    });
+      }).reduce((sum, r) => sum + (r.count || 0), 0);
 
+      row[date] = countOnDate > 0 ? `${countOnDate} (Present)` : "0 (Absent)";
+    });
     return row;
   });
 
-  // 3. Generate Sheet
+  // 3. Generate and Style
   const worksheet = XLSX.utils.json_to_sheet(excelData);
   
+  // FIX: Force column widths so headers aren't cut off
   const colWidths = [
     { wch: 20 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 12 }
   ];
@@ -308,8 +302,8 @@ const downloadReport = async (subject, format) => {
   worksheet["!cols"] = colWidths;
 
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance Report");
-  XLSX.writeFile(workbook, `${subject.subjectName}_Matrix_Report.xlsx`);
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
+  XLSX.writeFile(workbook, `${subject.subjectName}_Attendance.xlsx`);
 }
   } catch (error) { // FIX 3: Balanced the try-catch block
     console.error(error);
