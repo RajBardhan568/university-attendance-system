@@ -14,7 +14,7 @@ const AttendanceSchema = new mongoose.Schema({
         lat: Number,
         lng: Number
     },
-
+     timestamps: true ,
 
 });
 
