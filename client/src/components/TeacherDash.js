@@ -238,22 +238,23 @@ const downloadReport = async (subject, format) => {
       doc.text(`Total Classes: ${subject.totalClasses}`, 14, 49);
 
       // FIX 2: Use stats array for the PDF rows
-      autoTable(doc, {
-        startY: 55,
-        head: [["Reg No", "Name", "Obtained", "Total", "%", "Status"]],
-        body: stats.map((s) => {
-          const pct = (s.attended / (subject.totalClasses || 1)) * 100;
-          return [
-            s.regNo,
-            s.name,
-            s.attended,
-            subject.totalClasses,
-            `${pct.toFixed(1)}%`,
-            pct >= 75 ? "OK" : "SHORTAGE",
-          ];
-        }),
-        headStyles: { fillColor: [79, 70, 229] },
-      });
+// FIXED CODE
+autoTable(doc, {
+  startY: 55,
+  head: [["Reg No", "Name", "Obtained", "Total", "%", "Status"]],
+  body: stats.map((s) => { // <--- Changed from data to stats
+    const pct = (s.attended / (subject.totalClasses || 1)) * 100;
+    return [
+      s.regNo,
+      s.name,
+      s.attended,
+      subject.totalClasses,
+      `${pct.toFixed(1)}%`,
+      pct >= 75 ? "OK" : "SHORTAGE",
+    ];
+  }),
+  headStyles: { fillColor: [79, 70, 229] },
+});
       doc.save(`${subject.subjectName}_Report.pdf`);
 
     } else if (format === "xlsx") {
