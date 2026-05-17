@@ -31,27 +31,29 @@ router.get("/my-subjects/:teacherId", async (req, res) => {
   }
 });
 
-// 2. DOWNLOAD DATA - Uses the number of records to show 'Obtained' classes
+// 2. DOWNLOAD DATA - Matrix Layout fixing the hidden Mongoose properties issue
 router.get("/subject-stats/:subjectId", async (req, res) => {
   try {
     const { subjectId } = req.params;
     
-    // 1. Get ALL attendance for this subject
-    const attendances = await Attendance.find({ subjectId });
+    // 1. Get ALL attendance for this subject (.lean() converts documents into pure, readable JSON objects)
+    const attendances = await Attendance.find({ subjectId }).lean();
     
     // 2. Get unique registration numbers from THESE records only
     const activeRegNos = [...new Set(attendances.map(a => a.studentReg))];
 
     // 3. Build the response for only these students
     const stats = await Promise.all(activeRegNos.map(async (regNo) => {
-      const user = await User.findOne({ regNo });
+      // Using .lean() here too for clean, raw data performance
+      const user = await User.findOne({ regNo }).lean(); 
       const myRecords = attendances.filter(a => a.studentReg === regNo);
       
       return {
         regNo: regNo,
         name: user ? user.name : "Unknown",
         attended: myRecords.reduce((sum, r) => sum + (r.count || 0), 0),
-        attendanceRecords: myRecords // This MUST be here for Excel dates
+        // Now this is a pure JSON array that React/XLSX can easily parse for timestamps
+        attendanceRecords: myRecords 
       };
     }));
 
@@ -60,6 +62,7 @@ router.get("/subject-stats/:subjectId", async (req, res) => {
 
     res.json(stats);
   } catch (err) {
+    console.error("Backend matrix generation error:", err);
     res.status(500).json({ error: "Fetch failed" });
   }
 });
