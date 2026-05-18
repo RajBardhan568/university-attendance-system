@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { User, Mail, Lock, Phone, Hash, Image as ImageIcon, ArrowLeft, ShieldCheck, ArrowRight, Eye, EyeOff,CheckCircle } from "lucide-react";
+import { User, Mail, Lock, Phone, Hash, Image as ImageIcon, ArrowLeft, ShieldCheck, ArrowRight, Eye, EyeOff,CheckCircle,GraduationCap  } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 
@@ -15,6 +15,7 @@ const Register = () => {
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
   const [otpExpiry, setOtpExpiry] = useState(300); // 5 minutes in seconds
+  const [branch, setBranch] = useState("");
 
   const navigate = useNavigate();
 
@@ -24,6 +25,7 @@ const Register = () => {
     password: "",
     mobile: "",
     regNo: "",
+    branch: ""
   });
 
   const [errors, setErrors] = useState({
@@ -59,14 +61,20 @@ const Register = () => {
 
   const handleInitialSubmit = async (e) => {
     e.preventDefault();
-    let newErrors = { name: "", email: "", mobile: "", regNo: "", photo: "" };
+    let newErrors = { name: "", email: "", mobile: "", regNo: "", photo: "", branch: "" };
     let hasError = false;
 
     // Strict Validations
     if (formData.name.length < 3) { newErrors.name = "Name too short (Min 3 letters)"; hasError = true; }
+
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) { newErrors.email = "Invalid email format"; hasError = true; }
+
     if (formData.mobile.length !== 10) { newErrors.mobile = "Must be exactly 10 digits"; hasError = true; }
+
     if (role === "student" && !formData.regNo) { newErrors.regNo = "Registration number required"; hasError = true; }
+
+    if (role === "student" && !formData.branch) { newErrors.branch = "Branch required"; hasError = true; }
+
     if (role === "student" && !file) { newErrors.photo = "ID Photo is required"; hasError = true; }
 
     if (hasError) {
@@ -77,7 +85,8 @@ const Register = () => {
     setLoading(true);
     const data = new FormData();
     Object.keys(formData).forEach((key) => {
-      if (key === "regNo" && role === "teacher") return;
+      // Drop registration details if user is a teacher
+      if (key === "regNo" ||key === "branch" && role === "teacher") return;
       data.append(key, formData[key]);
     });
     data.append("role", role);
@@ -188,9 +197,32 @@ setTimeout(() => navigate("/login"), 3000);
                 <>
                   <div className="relative">
                     <Hash className="absolute left-4 top-4 text-slate-300" size={18} />
-                    <input name="regNo" value={formData.regNo} onChange={handleChange} maxLength={15} placeholder="Registration No" className={`w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl outline-none transition-all ${errors.regNo ? 'border-2 border-red-400' : 'focus:ring-2 focus:ring-indigo-500'}`} />
+                    <input 
+                    name="regNo" 
+                    value={formData.regNo} 
+                    onChange={handleChange} 
+                    maxLength={15} 
+                    placeholder="Registration No" 
+                    className={`w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl outline-none transition-all ${errors.regNo ? 'border-2 border-red-400' : 'focus:ring-2 focus:ring-indigo-500'}`} />
                     {errors.regNo && <p className="text-[10px] text-red-500 font-bold mt-1 ml-4">{errors.regNo}</p>}
                   </div>
+               {/* UPDATED: MANUAL BRANCH TEXT INPUT */}   
+               <div className="relative mt-3">
+      <GraduationCap className="absolute left-4 top-4 text-slate-300" size={18} />
+      <input 
+        name="branch" 
+        value={formData.branch || ""} 
+        onChange={handleChange} 
+        maxLength={30} 
+        placeholder="Branch / Department (e.g., CSE)" 
+        className={`w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl outline-none transition-all text-sm font-bold text-slate-700 placeholder-slate-400 ${
+          errors.branch ? 'border-2 border-red-400' : 'focus:ring-2 focus:ring-indigo-500'
+        }`} 
+        required
+      />
+      {errors.branch && <p className="text-[10px] text-red-500 font-bold mt-1 ml-4">{errors.branch}</p>}
+    </div>
+    {/* STUDENT ID PHOTO UPLOAD */}
                   <div className={`md:col-span-2 p-4 rounded-2xl border-2 border-dashed ${errors.photo ? 'bg-red-50 border-red-300' : 'bg-indigo-50 border-indigo-200'}`}>
                     <label className="flex flex-col items-center gap-2 cursor-pointer">
                       <div className="flex items-center gap-3">
