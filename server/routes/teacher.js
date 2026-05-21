@@ -94,6 +94,7 @@ router.post("/generate-code", async (req, res) => {
           teacherLat: Number(teacherLat),
           teacherLng: Number(teacherLng),
           rangeLimit: Number(rangeLimit) || 20,
+          timeLimit: Number(timeLimit) || 5,
         },
         // Increment the total classes count based on 'Qty' input
         $inc: {

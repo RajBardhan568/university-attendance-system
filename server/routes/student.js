@@ -41,16 +41,14 @@ router.post("/mark-attendance", async (req, res) => {
         error: "Invalid Code"
       });
     }
-// ============================================================
-    // FIXED FEATURE: CODE EXPIRATION SECURITY GUARD
+/// ============================================================
+    // FIXED FEATURE: CODE EXPIRATION SECURITY GUARD (CLEANED UP)
     // ============================================================
-    if (subject.codeCreatedAt && subject.codeDuration) {
+    if (subject.codeCreatedAt && subject.codeExpiresAt) {
       const currentTime = new Date();
-      const codeGenerationTime = new Date(subject.codeCreatedAt);
-      
-      // Calculate final deadline timestamp (Duration is in minutes, convert to milliseconds)
-      const expirationDeadline = new Date(codeGenerationTime.getTime() + subject.codeDuration * 60000);
+      const expirationDeadline = new Date(subject.codeExpiresAt);
 
+      // Directly compare current server time with pre-calculated DB expiry timestamp
       if (currentTime > expirationDeadline) {
         return res.status(400).json({
           error: "This attendance code has expired! Ask your instructor to regenerate a code."
