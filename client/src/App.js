@@ -18,7 +18,7 @@ function App() {
   const Footer = () => (
     <footer className="w-full py-8 text-center border-t border-slate-200 bg-white">
       <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]">
-        © {new Date().getFullYear()} Attendance.io • Developed by Raj Bardhan • All Rights Reserved
+        © {new Date().getFullYear()} Attendance.io • Developed by 8th Sem 2022-26 • All Rights Reserved
       </p>
     </footer>
   );

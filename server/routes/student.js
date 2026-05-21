@@ -86,7 +86,7 @@ router.post("/mark-attendance", async (req, res) => {
     if (duplicateDevice) {
 
       return res.status(400).json({
-        error: "One device per attendance allowed!"
+        error: "You are already marked your attendance."
       });
     }
 

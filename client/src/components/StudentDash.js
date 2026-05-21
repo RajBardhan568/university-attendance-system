@@ -263,8 +263,7 @@ const handleLogout = () => {
             <h2 className="text-2xl font-black text-slate-800 mb-8 flex items-center gap-3">
               <BookOpen className="text-indigo-600" /> Your Academic Records
             </h2>
-
-            {/* SUBJECT CARDS GRID */}
+       {/* SUBJECT CARDS GRID */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {attendanceData.map((item) => {
                 const total = item.totalHeld || 0;
@@ -443,11 +442,21 @@ const handleLogout = () => {
 
                   <div className="bg-slate-50 p-6 rounded-[2rem] text-left space-y-5 border border-slate-100 overflow-hidden">
                     <div className="flex justify-between items-center gap-4">
+
                       <span className="text-slate-400 font-bold text-xs uppercase tracking-widest shrink-0">
                         Email Address
                       </span>
                       <span className="font-black text-slate-500 italic text-sm truncate">
                         {user.email}
+                      </span>
+                    </div>
+                     <div className="flex justify-between items-center gap-4">
+                      
+                      <span className="text-slate-400 font-bold text-xs uppercase tracking-widest shrink-0">
+                        Branch
+                      </span>
+                      <span className="font-black text-slate-500 italic text-sm truncate">
+                        {user.branch || "N/A"}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
