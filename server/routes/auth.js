@@ -9,11 +9,9 @@ const sendEmail = require('../utils/sendEmail');
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 // 1. REGISTER USER
-// 1. REGISTER USER
-// 1. REGISTER USER
 router.post('/register', upload.single('profilePhoto'), async (req, res) => {
     try {
-        const { name, email, role, password, mobile, regNo } = req.body;
+        const { name, email, role, password, mobile, regNo , branch} = req.body;
         
         // --- 1. STRICT MULTI-FIELD VALIDATION ---
         // Check if ANY of the unique fields are already verified in the system
