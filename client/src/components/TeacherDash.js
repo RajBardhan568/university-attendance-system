@@ -238,7 +238,7 @@ const TeacherDash = ({ teacherId }) => {
         `https://university-attendance-system-rqyy.onrender.com/api/teacher/subject-stats/${subject._id}`,
       );
 
-      const { stats, sessions ,data} = res.data;
+      const { stats, sessions } = res.data;
 
       if (format === "pdf") {
         const doc = new jsPDF();
