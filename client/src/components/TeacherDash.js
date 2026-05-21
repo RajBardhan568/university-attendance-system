@@ -238,7 +238,7 @@ const TeacherDash = ({ teacherId }) => {
         `https://university-attendance-system-rqyy.onrender.com/api/teacher/subject-stats/${subject._id}`,
       );
 
-      const { stats, sessions } = res.data;
+      const { stats, sessions ,data} = res.data;
 
       if (format === "pdf") {
         const doc = new jsPDF();
@@ -250,11 +250,7 @@ const TeacherDash = ({ teacherId }) => {
 
         doc.setFontSize(11).setTextColor(80).setFont("helvetica", "normal");
         doc.text(`Faculty: ${currentUser?.name || "Faculty"}`, 14, 35);
-        doc.text(
-          `Subject: ${subject.subjectName} | Sem: ${subject.semester}`,
-          14,
-          42,
-        );
+        doc.text(`Subject: ${subject.subjectName} | Sem: ${subject.semester}`,14,42,);
         doc.text(`Total Classes: ${subject.totalClasses}`, 14, 49);
 
         autoTable(doc, {
@@ -274,6 +270,8 @@ const TeacherDash = ({ teacherId }) => {
           headStyles: { fillColor: [79, 70, 229] },
         });
         doc.save(`${subject.subjectName}_Report.pdf`);
+
+
       } else if (format === "xlsx") {
         console.log("Sessions from Backend:", sessions);
         console.log("Stats from Backend:", stats);
