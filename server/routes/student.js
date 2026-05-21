@@ -41,12 +41,29 @@ router.post("/mark-attendance", async (req, res) => {
         error: "Invalid Code"
       });
     }
+// ============================================================
+    // FIXED FEATURE: CODE EXPIRATION SECURITY GUARD
+    // ============================================================
+    if (subject.codeCreatedAt && subject.codeDuration) {
+      const currentTime = new Date();
+      const codeGenerationTime = new Date(subject.codeCreatedAt);
+      
+      // Calculate final deadline timestamp (Duration is in minutes, convert to milliseconds)
+      const expirationDeadline = new Date(codeGenerationTime.getTime() + subject.codeDuration * 60000);
 
-    // ==============================
-    // NEW FEATURE:
-    // Dynamic Geofencing Range
-    // ==============================
-
+      if (currentTime > expirationDeadline) {
+        return res.status(400).json({
+          error: "This attendance code has expired! Ask your instructor to regenerate a code."
+        });
+      }
+    } else {
+      // Fallback safeguard if the subject somehow has an activeCode but missing timestamp metadata
+      return res.status(400).json({
+        error: "Attendance session window configuration is invalid or closed."
+      });
+    }
+    // ============================================================
+   
     const distance = getDistance(
       lat, // Student latitude
       lng, // Student longitude
@@ -176,14 +193,10 @@ router.get("/my-stats/:regNo", async (req, res) => {
 
         return {
           subjectId: sub._id,
-
           subjectName: sub.subjectName,
-
           branch: sub.branch || "N/A",
           semester: sub.semester  || "N/A",
-
           totalHeld: sub.totalClasses || 0,
-
           attended: attendedCount,
         };
       }),
