@@ -249,7 +249,7 @@ const TeacherDash = ({ teacherId }) => {
           .text("ATTENDANCE REPORT", 14, 22);
 
         doc.setFontSize(11).setTextColor(80).setFont("helvetica", "normal");
-        doc.text(`Faculty: ${User.name || "Faculty"}`, 14, 35);
+        doc.text(`Faculty: ${user.name || "Faculty"}`, 14, 35);
         doc.text(`Subject: ${subject.subjectName} | Sem: ${subject.semester}`,14,42,);
         doc.text(`Total Classes: ${subject.totalClasses}`, 14, 49);
 
