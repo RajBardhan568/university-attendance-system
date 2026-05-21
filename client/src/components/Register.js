@@ -59,55 +59,56 @@ const Register = () => {
     setErrors({ ...errors, [name]: "" }); // Clear error as user types
   };
 
-  const handleInitialSubmit = async (e) => {
-    e.preventDefault();
-    let newErrors = { name: "", email: "", mobile: "", regNo: "", photo: "", branch: "" };
-    let hasError = false;
+const handleInitialSubmit = async (e) => {
+  e.preventDefault();
+  let newErrors = { name: "", email: "", mobile: "", regNo: "", photo: "", branch: "" };
+  let hasError = false;
 
-    // Strict Validations
-    if (formData.name.length < 3) { newErrors.name = "Name too short (Min 3 letters)"; hasError = true; }
+  // Strict Validations
+  if (formData.name.length < 3) { newErrors.name = "Name too short (Min 3 letters)"; hasError = true; }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) { newErrors.email = "Invalid email format"; hasError = true; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) { newErrors.email = "Invalid email format"; hasError = true; }
 
-    if (formData.mobile.length !== 10) { newErrors.mobile = "Must be exactly 10 digits"; hasError = true; }
+  if (formData.mobile.length !== 10) { newErrors.mobile = "Must be exactly 10 digits"; hasError = true; }
 
-    if (role === "student" && !formData.regNo) { newErrors.regNo = "Registration number required"; hasError = true; }
+  if (role === "student" && !formData.regNo) { newErrors.regNo = "Registration number required"; hasError = true; }
 
-    if (role === "student" && !formData.branch) { newErrors.branch = "Branch required"; hasError = true; }
+  if (role === "student" && !formData.branch) { newErrors.branch = "Branch required"; hasError = true; }
 
-    if (role === "student" && !file) { newErrors.photo = "ID Photo is required"; hasError = true; }
+  if (role === "student" && !file) { newErrors.photo = "ID Photo is required"; hasError = true; }
 
-    if (hasError) {
-      setErrors(newErrors);
-      return;
-    }
-
-    setLoading(true);
-    const data = new FormData();
-    Object.keys(formData).forEach((key) => {
-      // Drop registration details if user is a teacher
-      if (key === "regNo" ||key === "branch" && role === "teacher") return;
-      data.append(key, formData[key]);
-    });
-    data.append("role", role);
-    if (file && role === "student") data.append("profilePhoto", file);
-
-    try {
-      await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/register", data,{ timeout: 15000 });
-      setStep(2);
-      setTimer(30);
-      setOtpExpiry(300);
-      setCanResend(false);
-} catch (err) {
-  if (err.code === 'ECONNABORTED') {
-    alert("Server is taking too long. Please try again.");
-  } else {
-    alert(err.response?.data?.error || "Connection failed");
+  if (hasError) {
+    setErrors(newErrors);
+    return;
   }
-} finally {
-  setLoading(false);
-}
-  };
+
+  setLoading(true);
+  const data = new FormData();
+  Object.keys(formData).forEach((key) => {
+    // FIXED: Parentheses added here to group the OR expression properly
+    if ((key === "regNo" || key === "branch") && role === "teacher") return;
+    data.append(key, formData[key]);
+  });
+  
+  data.append("role", role);
+  if (file && role === "student") data.append("profilePhoto", file);
+
+  try {
+    await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/register", data, { timeout: 15000 });
+    setStep(2);
+    setTimer(30);
+    setOtpExpiry(300);
+    setCanResend(false);
+  } catch (err) {
+    if (err.code === 'ECONNABORTED') {
+      alert("Server is taking too long. Please try again.");
+    } else {
+      alert(err.response?.data?.error || "Connection failed");
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleResendOtp = async () => {
     setResendLoading(true);
