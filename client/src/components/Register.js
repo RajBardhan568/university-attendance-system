@@ -61,6 +61,11 @@ const Register = () => {
 
 const handleInitialSubmit = async (e) => {
   e.preventDefault();
+// ADD THIS TEMPORARY DEBUG LOG RIGHT HERE:
+  console.log("--- DEBUGGING REGISTRATION DATA ---");
+  console.log("Current role:", role);
+  console.log("formData state values:", formData);
+
   let newErrors = { name: "", email: "", mobile: "", regNo: "", photo: "", branch: "" };
   let hasError = false;
 
