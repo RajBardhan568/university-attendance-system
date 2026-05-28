@@ -98,7 +98,7 @@ const Login = () => {
                 value={formData.email}
                 onChange={handleChange}
                 className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent rounded-2xl outline-none focus:border-indigo-500 focus:bg-white transition-all font-semibold text-slate-700"
-                placeholder="name@university.com"
+                placeholder="Enter Your Email Address"
                 required
               />
             </div>
@@ -130,7 +130,7 @@ const Login = () => {
                 value={formData.password}
                 onChange={handleChange}
                 className="w-full pl-12 pr-12 py-4 bg-slate-50 border-2 border-transparent rounded-2xl outline-none focus:border-indigo-500 focus:bg-white transition-all font-semibold text-slate-700"
-                placeholder="••••••••"
+                placeholder="Enter Your Password"
                 required
               />
               <button

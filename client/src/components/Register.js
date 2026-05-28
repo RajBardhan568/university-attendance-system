@@ -180,7 +180,7 @@ setTimeout(() => navigate("/login"), 3000);
 
               <div className="relative">
                 <Mail className="absolute left-4 top-4 text-slate-300" size={18} />
-                <input name="email" type="email" value={formData.email} onChange={handleChange} placeholder="University Email" className={`w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl outline-none transition-all ${errors.email ? 'border-2 border-red-400' : 'focus:ring-2 focus:ring-indigo-500'}`} />
+                <input name="email" type="email" value={formData.email} onChange={handleChange} placeholder="Email Id" className={`w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl outline-none transition-all ${errors.email ? 'border-2 border-red-400' : 'focus:ring-2 focus:ring-indigo-500'}`} />
                 {errors.email && <p className="text-[10px] text-red-500 font-bold mt-1 ml-4">{errors.email}</p>}
               </div>
 
@@ -230,7 +230,7 @@ setTimeout(() => navigate("/login"), 3000);
                     <label className="flex flex-col items-center gap-2 cursor-pointer">
                       <div className="flex items-center gap-3">
                         <div className="bg-indigo-600 p-2 rounded-lg text-white"><ImageIcon size={20}/></div>
-                        <span className="text-sm font-bold text-indigo-700">{file ? file.name : "Upload Student ID (MAX 100KB)"}</span>
+                        <span className="text-sm font-bold text-indigo-700">{file ? file.name : "Upload Your Photo (MAX 100KB)"}</span>
                       </div>
                       <input type="file" className="hidden" accept="image/*" onChange={(e) => {
                         const sFile = e.target.files[0];
