@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react"; // Added useEffect for timer tracking
+import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Mail, ShieldCheck, Lock, ArrowRight, ArrowLeft, Loader2, Clock, RotateCcw } from "lucide-react"; // Added Clock and RotateCcw icons
+import { Mail, ShieldCheck, Lock, ArrowRight, ArrowLeft, Loader2, Clock, RotateCcw } from "lucide-react";
 
 const ForgotPassword = () => {
   const [step, setStep] = useState(1); // 1: Email, 2: OTP & New Password
@@ -11,24 +11,22 @@ const ForgotPassword = () => {
   const [loading, setLoading] = useState(false);
   
   // ============================================================
-  // NEW ADDITIONS: TIMER & RESEND STATE HOOKS
+  // UPDATED CONFIGURATION: SEPARATED OTP & RESEND TIMERS
   // ============================================================
-  const [timer, setTimer] = useState(60); // 60 seconds countdown window
-  const [canResend, setCanResend] = useState(false);
+  const [otpTimer, setOtpTimer] = useState(300);     // 5 Minutes (300 seconds) expiration window
+  const [resendTimer, setResendTimer] = useState(60); // 1 Minute (60 seconds) cooldown window
 
-  // Countdown clock effect loop
+  // Dual countdown clock effect loop
   useEffect(() => {
     let interval = null;
-    if (step === 2 && timer > 0) {
+    if (step === 2) {
       interval = setInterval(() => {
-        setTimer((prev) => prev - 1);
+        setOtpTimer((prev) => (prev > 0 ? prev - 1 : 0));
+        setResendTimer((prev) => (prev > 0 ? prev - 1 : 0));
       }, 1000);
-    } else if (timer === 0) {
-      setCanResend(true);
-      clearInterval(interval);
     }
     return () => clearInterval(interval);
-  }, [step, timer]);
+  }, [step]);
   // ============================================================
 
   const handleSendOtp = async (e) => {
@@ -41,9 +39,9 @@ const ForgotPassword = () => {
       );
       alert("OTP sent to your email!");
       
-      // Initialize Timer States on successful generation
-      setTimer(60);
-      setCanResend(false);
+      // Initialize separate timer metrics upon entering Step 2
+      setOtpTimer(300);
+      setResendTimer(60);
       setStep(2);
     } catch (err) {
       alert(err.response?.data?.error || "User not found");
@@ -53,7 +51,7 @@ const ForgotPassword = () => {
   };
 
   const handleResendOtp = async () => {
-    if (!canResend) return;
+    if (resendTimer > 0) return; // Prevent clicking before cooldown clears
     setLoading(true);
     try {
       await axios.post(
@@ -62,10 +60,10 @@ const ForgotPassword = () => {
       );
       alert("✨ A brand new OTP code has been sent to your inbox!");
       
-      // Reset Countdown Tracker Metrics
-      setOtp(""); // Flush old text field inputs
-      setTimer(60);
-      setCanResend(false);
+      // Reset separate tracking metrics
+      setOtp(""); 
+      setOtpTimer(300); // Gives another fresh 5 minutes
+      setResendTimer(60); // Resets 1 minute resend restriction cooldown
     } catch (err) {
       alert(err.response?.data?.error || "Failed to resend authentication code.");
     } finally {
@@ -76,8 +74,8 @@ const ForgotPassword = () => {
   const handleResetPassword = async (e) => {
     e.preventDefault();
     
-    // Safety check if user somehow bypasses disabled UI buttons
-    if (timer === 0) {
+    // Safety check if the 5-minute window expires
+    if (otpTimer === 0) {
       alert("❌ This OTP has expired! Please click the resend button to receive a new one.");
       return;
     }
@@ -99,9 +97,11 @@ const ForgotPassword = () => {
     }
   };
 
-  // Helper formatting utility to print standard clock digits (e.g., 00:45)
+  // Helper formatting utility to print standard clock digits (MM:SS) up to 5 minutes
   const formatTime = (seconds) => {
-    return `00:${seconds < 10 ? `0${seconds}` : seconds}`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins < 10 ? `0${mins}` : mins}:${secs < 10 ? `0${secs}` : secs}`;
   };
 
   return (
@@ -126,10 +126,10 @@ const ForgotPassword = () => {
                   Sent to: <span className="text-slate-700 font-bold">{email}</span>
                 </p>
                 
-                {/* DYNAMIC TIMER INTERACTIVE UI FEEDBACK BANNER */}
-                {timer > 0 ? (
+                {/* 5-MINUTE CODE EXPIRATION TRACKER BANNER */}
+                {otpTimer > 0 ? (
                   <p className="text-xs text-amber-600 font-bold flex items-center gap-1 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-100">
-                    <Clock size={12} className="animate-pulse" /> Code Expires In: {formatTime(timer)}
+                    <Clock size={12} className="animate-pulse" /> Code Expires In: {formatTime(otpTimer)}
                   </p>
                 ) : (
                   <p className="text-xs text-rose-600 font-black flex items-center gap-1 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-100">
@@ -180,9 +180,9 @@ const ForgotPassword = () => {
                 autoComplete="one-time-code"
                 inputMode="numeric"
                 value={otp}
-                disabled={loading || timer === 0} // Blocks typing automatically if code drops past duration deadline
+                disabled={loading || otpTimer === 0} // Disables field only when the full 5-minute timer hits zero
                 className="w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-700 tracking-wide disabled:opacity-60"
-                placeholder={timer === 0 ? "CODE EXPIRED" : "6-Digit OTP"}
+                placeholder={otpTimer === 0 ? "CODE EXPIRED" : "6-Digit OTP"}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                 required
               />
@@ -192,7 +192,7 @@ const ForgotPassword = () => {
               <input
                 type="password"
                 value={newPassword}
-                disabled={loading || timer === 0}
+                disabled={loading || otpTimer === 0}
                 autoComplete="new-password"
                 className="w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-700 disabled:opacity-60"
                 placeholder="New Password"
@@ -205,7 +205,7 @@ const ForgotPassword = () => {
               <input
                 type="password"
                 value={confirmPassword}
-                disabled={loading || timer === 0}
+                disabled={loading || otpTimer === 0}
                 autoComplete="new-password"
                 className="w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-700 disabled:opacity-60"
                 placeholder="Confirm Password"
@@ -214,9 +214,8 @@ const ForgotPassword = () => {
               />
             </div>
             
-            {/* SUBMIT RESET PASSWORD ACTION BUTTON */}
             <button 
-              disabled={loading || timer === 0} // Disables form processing if timer hits zero
+              disabled={loading || otpTimer === 0}
               className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-xl hover:bg-indigo-700 flex items-center justify-center gap-2 transition-all disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
             >
               {loading ? (
@@ -228,9 +227,9 @@ const ForgotPassword = () => {
               )}
             </button>
 
-            {/* DYNAMIC RESEND CODE CONTROLLER LINK */}
+            {/* 1-MINUTE RESEND COOLDOWN LINK CONTROLLER */}
             <div className="text-center pt-2">
-              {canResend ? (
+              {resendTimer === 0 ? (
                 <button
                   type="button"
                   onClick={handleResendOtp}
@@ -241,7 +240,7 @@ const ForgotPassword = () => {
                 </button>
               ) : (
                 <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
-                  Resend OTP available in {timer}s
+                  Resend OTP available in {resendTimer}s
                 </span>
               )}
             </div>
