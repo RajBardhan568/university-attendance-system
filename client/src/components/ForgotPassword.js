@@ -58,7 +58,7 @@ const ForgotPassword = () => {
         "https://university-attendance-system-rqyy.onrender.com/api/auth/forgot-password",
         { email }
       );
-      alert("✨ A brand new OTP code has been sent to your inbox!");
+      alert("✨ New OTP code has been successfully sent to your email!");
       
       // Reset separate tracking metrics
       setOtp(""); 
