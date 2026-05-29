@@ -229,6 +229,7 @@ const TeacherDash = ({ teacherId }) => {
         alert("📍 Location access required to generate secure codes.");
         setGeneratingMap((prev) => ({ ...prev, [subjectId]: false }));
       },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 

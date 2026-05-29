@@ -87,7 +87,7 @@ const StudentDash = () => {
         alert("📍 Please enable Location Services to mark attendance.");
         setIsMarking(false); // Stop loader if location is denied
       },
-      { enableHighAccuracy: true, timeout: 5000 }, // Professional addition for accuracy
+     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } // Professional addition for accuracy
     );
   };
 
