@@ -2,9 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
-import * as serviceWorkerRegistration from './serviceWorkerRegistration';
+// import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 
-serviceWorkerRegistration.register();
+// serviceWorkerRegistration.register();
 
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -15,9 +15,9 @@ root.render(
 );
 
 
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/service-worker.js")
-      .catch(err => console.log(err));
-  });
-}
+// if ("serviceWorker" in navigator) {
+//   window.addEventListener("load", () => {
+//     navigator.serviceWorker.register("/service-worker.js")
+//       .catch(err => console.log(err));
+//   });
+// }
