@@ -2,6 +2,11 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { Browser } from '@capacitor/browser';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
+import { Geolocation } from '@capacitor/geolocation';
 import * as XLSX from "xlsx"; // Import this at the top
 import {
   Trash2,
@@ -69,7 +74,10 @@ const TeacherDash = ({ teacherId }) => {
     JSON.parse(localStorage.getItem("user")) || {},
   );
   const [todayCounts, setTodayCounts] = useState({});
-  const [selectedRange, setSelectedRange] = useState({});
+  const [selectedRange, setSelectedRange] = useState(() => {
+    const saved = localStorage.getItem('teacherSelectedRange');
+    return saved ? JSON.parse(saved) : {};
+  });
   const [selectedTime, setSelectedTime] = useState({});
 
   const [session, setSession] = useState("");
@@ -121,18 +129,18 @@ const TeacherDash = ({ teacherId }) => {
   };
 
   const handleLogout = () => {
-  // Pop up a confirmation dialog box
-  const isConfirmed = window.confirm("Are you sure you want to logout?");
-  
-  // If the user clicks "OK", clear data and redirect
-  if (isConfirmed) {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    // If you are using React Router use: navigate("/login");
-    window.location.href = "/login"; 
-  }
-  // If they click "Cancel", nothing happens and they stay logged in
-};
+    // Pop up a confirmation dialog box
+    const isConfirmed = window.confirm("Are you sure you want to logout?");
+
+    // If the user clicks "OK", clear data and redirect
+    if (isConfirmed) {
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      // If you are using React Router use: navigate("/login");
+      window.location.href = "/login";
+    }
+    // If they click "Cancel", nothing happens and they stay logged in
+  };
   // Simplified Update for Teacher (Name + Mobile Only)
   const handleUpdateProfile = async () => {
     // 1. Validations
@@ -184,6 +192,8 @@ const TeacherDash = ({ teacherId }) => {
     }
   };
 
+  //  --------------------------------------------------------
+
   const generateCode = async (subjectId) => {
     const count = manualIncrements[subjectId] || 1;
     const range = selectedRange[subjectId] || 20;
@@ -192,49 +202,62 @@ const TeacherDash = ({ teacherId }) => {
     // Set loading for this specific subject
     setGeneratingMap((prev) => ({ ...prev, [subjectId]: true }));
 
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const res = await axios.post(
-            "https://university-attendance-system-rqyy.onrender.com/api/teacher/generate-code",
-            {
-              subjectId,
-              incrementBy: Number(count),
-              teacherLat: pos.coords.latitude,
-              teacherLng: pos.coords.longitude,
-              timeLimit: Number(time),
-              rangeLimit: Number(range),
-            },
-          );
+    try {
+      // 1. Pehle native/browser location permissions request karein
+      const permissions = await Geolocation.requestPermissions();
 
-          setSubjects(
-            subjects.map((s) =>
-              s._id === subjectId ? res.data.updatedSubject : s,
-            ),
-          );
-
-          await fetchSessionCount(subjectId);
-
-          // OPTIONAL: Success alert
-          alert("✨ Session Code Generated Successfully!");
-        } catch (err) {
-          console.error("Generate error:", err);
-          alert("❌ Failed to generate code. Check server connection.");
-        } finally {
-          // Stop loading for this specific subject
-          setGeneratingMap((prev) => ({ ...prev, [subjectId]: false }));
-        }
-      },
-      (err) => {
+      if (permissions.location !== 'granted' && permissions.location !== 'limited') {
         alert("📍 Location access required to generate secure codes.");
         setGeneratingMap((prev) => ({ ...prev, [subjectId]: false }));
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
+        return;
+      }
+
+      // 2. Teacher ki current location coordinates fetch karein
+      const pos = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      });
+
+      const { latitude, longitude } = pos.coords;
+
+      // 3. Server par code generation ki request bhejein
+      const res = await axios.post(
+        "https://university-attendance-system-rqyy.onrender.com/api/teacher/generate-code",
+        {
+          subjectId,
+          incrementBy: Number(count),
+          teacherLat: latitude,
+          teacherLng: longitude,
+          timeLimit: Number(time),
+          rangeLimit: Number(range),
+        },
+      );
+
+      setSubjects(
+        subjects.map((s) =>
+          s._id === subjectId ? res.data.updatedSubject : s,
+        ),
+      );
+
+      await fetchSessionCount(subjectId);
+
+      // Success alert
+      alert("✨ Session Code Generated Successfully!");
+    } catch (err) {
+      console.error("Generate error:", err);
+      alert("❌ Failed to generate code. Check server connection.");
+    } finally {
+      // Stop loading for this specific subject
+      setGeneratingMap((prev) => ({ ...prev, [subjectId]: false }));
+    }
   };
+  // ................................................................
 
   const downloadReport = async (subject, format) => {
     try {
+      // 1. Download shuru hone ka message/loader
+      alert("📥 Preparing your report, please wait...");
       const res = await axios.get(
         `https://university-attendance-system-rqyy.onrender.com/api/teacher/subject-stats/${subject._id}`,
       );
@@ -251,7 +274,7 @@ const TeacherDash = ({ teacherId }) => {
 
         doc.setFontSize(11).setTextColor(80).setFont("helvetica", "normal");
         doc.text(`Faculty: ${user.name || "Faculty"}`, 14, 35);
-        doc.text(`Subject: ${subject.subjectName} | Sem: ${subject.semester}`,14,42,);
+        doc.text(`Subject: ${subject.subjectName} | Sem: ${subject.semester}`, 14, 42);
         doc.text(`Total Classes: ${subject.totalClasses}`, 14, 49);
 
         autoTable(doc, {
@@ -270,13 +293,37 @@ const TeacherDash = ({ teacherId }) => {
           }),
           headStyles: { fillColor: [79, 70, 229] },
         });
-        doc.save(`${subject.subjectName}_Report.pdf`);
 
+        const fileName = `${subject.subjectName}_Report.pdf`;
+
+        // Agar mobile app (Capacitor) hai toh Filesystem & Share use karein
+        if (Capacitor.isNativePlatform()) {
+          const pdfBase64 = doc.output('datauristring').split(',')[1];
+          const savedFile = await Filesystem.writeFile({
+            path: fileName,
+            data: pdfBase64,
+            directory: Directory.Documents,
+          });
+
+          // File save hone ka confirmation message
+          alert("✅ Report Downloaded Successfully & saved in Documents!");
+
+          try {
+            await Share.share({
+              title: 'Attendance PDF Report',
+              text: 'Here is the attendance report PDF.',
+              url: savedFile.uri,
+              dialogTitle: 'Share or View Report',
+            });
+          } catch (shareErr) {
+            // Agar user ne cancel kiya, toh koi error popup nahi aayega!
+            console.log("Share dialog closed by user.");
+          }
+        } else {
+          doc.save(fileName);
+        }
 
       } else if (format === "xlsx") {
-        console.log("Sessions from Backend:", sessions);
-        console.log("Stats from Backend:", stats);
-
         const allDates = [
           ...new Set(
             (sessions || [])
@@ -288,10 +335,10 @@ const TeacherDash = ({ teacherId }) => {
                 return isNaN(d.getTime())
                   ? null
                   : d.toLocaleDateString("en-GB", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    });
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  });
               })
               .filter(Boolean),
           ),
@@ -349,7 +396,41 @@ const TeacherDash = ({ teacherId }) => {
 
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance Report");
-        XLSX.writeFile(workbook, `${subject.subjectName}_Matrix_Report.xlsx`);
+        const fileName = `${subject.subjectName}_Matrix_Report.xlsx`;
+
+        if (Capacitor.isNativePlatform()) {
+          const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+          const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+
+          const base64Data = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result.split(',')[1]);
+            reader.readAsDataURL(blob);
+          });
+
+          const savedFile = await Filesystem.writeFile({
+            path: fileName,
+            data: base64Data,
+            directory: Directory.Documents,
+          });
+
+          // File save hone ka confirmation message
+          alert("✅ Report Downloaded Successfully & saved in Documents!");
+
+          try {
+            await Share.share({
+              title: 'Attendance Excel Report',
+              text: 'Here is the attendance matrix Excel report.',
+              url: savedFile.uri,
+              dialogTitle: 'Share or View Report',
+            });
+          } catch (shareErr) {
+            // Agar user ne cancel kiya, toh koi error popup nahi aayega!
+            console.log("Share dialog closed by user.");
+          }
+        } else {
+          XLSX.writeFile(workbook, fileName);
+        }
       }
     } catch (error) {
       console.error(error);
@@ -385,15 +466,15 @@ const TeacherDash = ({ teacherId }) => {
             >
               My Profile
             </button>
-<button 
-  onClick={handleLogout}
-  className="flex items-center gap-2 text-sm font-bold text-rose-600 hover:bg-rose-50 p-3 rounded-2xl w-full transition-all"
->
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-  </svg>
-  Logout
-</button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 text-sm font-bold text-rose-600 hover:bg-rose-50 p-3 rounded-2xl w-full transition-all"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Logout
+            </button>
           </div>
         </nav>
 
@@ -637,24 +718,44 @@ const TeacherDash = ({ teacherId }) => {
                     </div>
 
                     {/* CODE GENERATION CONTROLS */}
-                    <div className="flex gap-2 mb-6">
+
+                    {/* CLASS INPUT (FIXED) */}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[9px] font-black text-slate-400 uppercase px-1">Class</span>
                       <input
                         type="number"
-                        placeholder="Qty"
-                        className="w-16 bg-slate-50 rounded-xl text-center font-bold outline-none"
-                        value={manualIncrements[sub._id] || ""}
-                        onChange={(e) =>
+                        min="1"
+                        max="5"
+                        placeholder="Class"
+                        className="bg-slate-50 p-2 rounded-xl text-[10px] font-bold border border-slate-100 outline-none text-center w-full"
+                        value={manualIncrements[sub._id] !== undefined ? manualIncrements[sub._id] : ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "") {
+                            setManualIncrements({
+                              ...manualIncrements,
+                              [sub._id]: "",
+                            });
+                            return;
+                          }
+                          let num = Number(val);
+                          if (num > 5) {
+                            alert("⚠️ Max increment quantity allowed is 5.");
+                            num = 5;
+                          }
                           setManualIncrements({
                             ...manualIncrements,
-                            [sub._id]: e.target.value,
-                          })
-                        }
+                            [sub._id]: num,
+                          });
+                        }}
                       />
-                      {/* TIME DROPDOWN */}
-                      <div className="flex flex-col gap-1">
-<span className="text-[9px] font-black text-slate-400 uppercase px-1">Time</span>
+                    </div>
+
+                    {/* TIME DROPDOWN */}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[9px] font-black text-slate-400 uppercase px-1">Time</span>
                       <select
-className="bg-slate-50 p-2 rounded-xl text-[10px] font-bold border border-slate-100 outline-none"
+                        className="bg-slate-50 p-2 rounded-xl text-[10px] font-bold border border-slate-100 outline-none"
                         value={selectedTime[sub._id] || "5"}
                         onChange={(e) =>
                           setSelectedTime({
@@ -667,183 +768,198 @@ className="bg-slate-50 p-2 rounded-xl text-[10px] font-bold border border-slate-
                         <option value="5">5 min</option>
                         <option value="10">10 min</option>
                       </select>
-                      </div>
-                      {/* RANGE DROPDOWN */}
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[9px] font-black text-slate-400 uppercase px-1">Range</span>
-                      <select
-                        className="bg-slate-50 p-2 rounded-xl text-[10px] font-bold border border-slate-100 outline-none"
-                        // 1. Link to state
-                        value={selectedRange[sub._id] || "20"}
-                        // 2. Update state when changed
-
-                        onChange={(e) =>
-                          setSelectedRange({
-                            ...selectedRange,
-
-                            [sub._id]: e.target.value,
-                          })
-                        }
-                      >
-                        <option value="10">10m</option>
-                        <option value="20">20m</option>
-                        <option value="50">50m</option>
-                      </select>
-</div>
-                      {/* 3. The Generate Button (Full Width, No Overlap) */}
-                      <button
-                        disabled={generatingMap[sub._id]}
-                        onClick={() => generateCode(sub._id)}
-                        className={`w-full py-3 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-3 border-2 
-      ${
-        generatingMap[sub._id]
-          ? "bg-indigo-50 border-indigo-100 text-indigo-300 cursor-not-allowed"
-          : "bg-indigo-600 border-indigo-600 text-white hover:bg-white hover:text-indigo-600 hover:shadow-lg hover:shadow-indigo-100 active:scale-95 shadow-lg shadow-indigo-100"
-      }`}
-                      >
-                        {generatingMap[sub._id] ? (
-                          <>
-                            <div className="w-3 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
-                            <span>Securing..</span>
-                          </>
-                        ) : (
-                          <>
-                            <Zap size={20} fill="currentColor" />
-                            <span>Generate Code</span>
-                          </>
-                        )}
-                      </button>
                     </div>
-                    {/* subject date created */}
-                    <span className="text-[10px] text-slate-400 italic mt-1">
-                      Created on:{" "}
-                      {sub.createdAt
-                        ? new Date(sub.createdAt).toLocaleDateString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })
-                        : "18 May 2026"}
-                    </span>
-                    {/* UPDATE: EXPORT DATA SECTION (Merged inside the loop, using 'sub') */}
-                    <div className="mt-6 pt-6 border-t border-slate-100">
-                      <p className="text-[10px] font-black text-slate-400 uppercase mb-3">
-                        Export Data
-                      </p>
-                      <div className="flex gap-3">
-                        <button
-                          onClick={() => downloadReport(sub, "pdf")} // Changed 'subject' to 'sub'
-                          className="flex-1 bg-indigo-600/10 text-indigo-600 py-3 rounded-xl font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-2"
-                        >
-                          Download PDF
-                        </button>
-                        <button
-                          onClick={() => downloadReport(sub, "xlsx")} // Changed 'subject' to 'sub'
-                          className="flex-1 bg-emerald-600/10 text-emerald-600 py-3 rounded-xl font-bold text-xs hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-2"
-                        >
-                          Download Excel
-                        </button>
+
+                    {/* MANUAL RANGE INPUT */}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[9px] font-black text-slate-400 uppercase px-1">Range (in Meters)</span>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min="10"
+                          max="100"
+                          className="bg-slate-50 p-2 rounded-xl text-[10px] font-bold border border-slate-100 outline-none w-full"
+                          value={selectedRange[sub._id] ?? 30} // Default 30m set rahega agar kuch na ho
+
+                          onChange={(e) => {
+                            let val = e.target.value;
+                            if (val !== "") {
+                              let num = Number(val);
+                              if (num > 100) {
+                                alert("⚠️ Maximum range limit is 100 meters!");
+                                num = 100;
+                              } else if (num < 10 && val.length >= 2) {
+                                alert("⚠️ Minimum range limit is 10 meters!");
+                                num = 10;
+                              }
+                              val = num;
+                            }
+                            const updated = {
+                              ...selectedRange,
+                              [sub._id]: val,
+                            };
+                            setSelectedRange(updated);
+                            localStorage.setItem('teacherSelectedRange', JSON.stringify(updated));
+                          }}
+                        />
+                        <span className="text-[10px] font-bold text-slate-500">m</span>
                       </div>
-                    </div>
+                    
+
+                    {/* 3. The Generate Button (Full Width, No Overlap) */}
+                    <button
+                      disabled={generatingMap[sub._id]}
+                      onClick={() => generateCode(sub._id)}
+                      className={`w-full py-3 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-3 border-2 
+      ${generatingMap[sub._id]
+                          ? "bg-indigo-50 border-indigo-100 text-indigo-300 cursor-not-allowed"
+                          : "bg-indigo-600 border-indigo-600 text-white hover:bg-white hover:text-indigo-600 hover:shadow-lg hover:shadow-indigo-100 active:scale-95 shadow-lg shadow-indigo-100"
+                        }`}
+                    >
+                      {generatingMap[sub._id] ? (
+                        <>
+                          <div className="w-3 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                          <span>Securing..</span>
+                        </>
+                      ) : (
+                        <>
+                          <Zap size={20} fill="currentColor" />
+                          <span>Generate Code</span>
+                        </>
+                      )}
+                    </button>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : (
-          /* PROFILE - Responsive layout with Edit */
-          <div className="max-w-xl mx-auto bg-white p-8 md:p-12 rounded-[3rem] shadow-xl border border-slate-100 text-center relative overflow-hidden">
-            <div className="relative w-32 h-32 mx-auto mb-6">
-              <div className="w-full h-full bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-5xl font-black">
-                {user.name?.charAt(0)}
-              </div>
-              <button
-                onClick={() => setIsEditing(!isEditing)}
-                className="absolute bottom-0 right-0 bg-white p-2 rounded-full shadow-lg text-indigo-600 border border-slate-100"
-              >
-                {isEditing ? <X size={20} /> : <Edit3 size={20} />}
-              </button>
-            </div>
-
-            {isEditing ? (
-              <div className="space-y-4 text-left">
-                <div>
-                  <label className="text-xs font-black text-slate-400 ml-2">
-                    FULL NAME (LETTERS ONLY)
-                  </label>
-                  <input
-                    className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
-                    value={user.name}
-                    maxLength={30}
-                    onInput={(e) =>
-                      (e.target.value = e.target.value.replace(
-                        /[^A-Za-z\s]/g,
-                        "",
-                      ))
-                    }
-                    onChange={(e) => setUser({ ...user, name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-black text-slate-400 ml-2">
-                    MOBILE NUMBER
-                  </label>
-                  <input
-                    className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
-                    value={user.mobile}
-                    maxLength={10}
-                    onInput={(e) =>
-                      (e.target.value = e.target.value.replace(/\D/g, ""))
-                    }
-                    onChange={(e) =>
-                      setUser({ ...user, mobile: e.target.value })
-                    }
-                  />
-                </div>
-                <button
-                  onClick={handleUpdateProfile}
-                  className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2"
-                >
-                  <Save size={20} /> Save Changes
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <h2 className="text-3xl font-black text-slate-900 truncate px-4">
-                  {user.name}
-                </h2>
-                <p className="text-indigo-600 font-black uppercase tracking-widest text-xs">
-                  Faculty ID: {teacherId}
+                    {/* subject date created */ }
+                  < span className = "text-[10px] text-slate-400 italic mt-1" >
+                  Created on:{" "}
+                {sub.createdAt
+                  ? new Date(sub.createdAt).toLocaleDateString("en-GB", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })
+                  : "18 May 2026"}
+              </span>
+              {/* UPDATE: EXPORT DATA SECTION (Merged inside the loop, using 'sub') */}
+              <div className="mt-6 pt-6 border-t border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-3">
+                  Export Data
                 </p>
-
-                <div className="bg-slate-50 p-6 rounded-3xl text-left space-y-4 mt-8 overflow-hidden">
-                  <div className="flex justify-between items-center gap-4">
-                    <span className="text-slate-400 font-bold shrink-0">
-                      Email
-                    </span>
-                    <span className="font-black text-slate-700 truncate">
-                      {user.email}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400 font-bold">Mobile</span>
-                    <span className="font-black text-slate-700">
-                      {user.mobile || "Not Provided"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400 font-bold">Subjects</span>
-                    <span className="font-black text-slate-700">
-                      {subjects.length}
-                    </span>
-                  </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => downloadReport(sub, "pdf")} // Changed 'subject' to 'sub'
+                    className="flex-1 bg-indigo-600/10 text-indigo-600 py-3 rounded-xl font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-2"
+                  >
+                    Download PDF
+                  </button>
+                  <button
+                    onClick={() => downloadReport(sub, "xlsx")} // Changed 'subject' to 'sub'
+                    className="flex-1 bg-emerald-600/10 text-emerald-600 py-3 rounded-xl font-bold text-xs hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-2"
+                  >
+                    Download Excel
+                  </button>
                 </div>
               </div>
-            )}
+            </div>
+                ))}
           </div>
-        )}
-      </div>
+            </div>
     </div>
+  ) : (
+    /* PROFILE - Responsive layout with Edit */
+    <div className="max-w-xl mx-auto bg-white p-8 md:p-12 rounded-[3rem] shadow-xl border border-slate-100 text-center relative overflow-hidden">
+      <div className="relative w-32 h-32 mx-auto mb-6">
+        <div className="w-full h-full bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-5xl font-black">
+          {user.name?.charAt(0)}
+        </div>
+        <button
+          onClick={() => setIsEditing(!isEditing)}
+          className="absolute bottom-0 right-0 bg-white p-2 rounded-full shadow-lg text-indigo-600 border border-slate-100"
+        >
+          {isEditing ? <X size={20} /> : <Edit3 size={20} />}
+        </button>
+      </div>
+
+      {isEditing ? (
+        <div className="space-y-4 text-left">
+          <div>
+            <label className="text-xs font-black text-slate-400 ml-2">
+              FULL NAME (LETTERS ONLY)
+            </label>
+            <input
+              className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
+              value={user.name}
+              maxLength={30}
+              onInput={(e) =>
+              (e.target.value = e.target.value.replace(
+                /[^A-Za-z\s]/g,
+                "",
+              ))
+              }
+              onChange={(e) => setUser({ ...user, name: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-black text-slate-400 ml-2">
+              MOBILE NUMBER
+            </label>
+            <input
+              className="w-full p-4 bg-slate-50 rounded-2xl mt-1 outline-none ring-2 ring-indigo-500 font-bold"
+              value={user.mobile}
+              maxLength={10}
+              onInput={(e) =>
+                (e.target.value = e.target.value.replace(/\D/g, ""))
+              }
+              onChange={(e) =>
+                setUser({ ...user, mobile: e.target.value })
+              }
+            />
+          </div>
+          <button
+            onClick={handleUpdateProfile}
+            className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2"
+          >
+            <Save size={20} /> Save Changes
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <h2 className="text-3xl font-black text-slate-900 truncate px-4">
+            {user.name}
+          </h2>
+          <p className="text-indigo-600 font-black uppercase tracking-widest text-xs">
+            Faculty ID: {teacherId}
+          </p>
+
+          <div className="bg-slate-50 p-6 rounded-3xl text-left space-y-4 mt-8 overflow-hidden">
+            <div className="flex justify-between items-center gap-4">
+              <span className="text-slate-400 font-bold shrink-0">
+                Email
+              </span>
+              <span className="font-black text-slate-700 truncate">
+                {user.email}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400 font-bold">Mobile</span>
+              <span className="font-black text-slate-700">
+                {user.mobile || "Not Provided"}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400 font-bold">Subjects</span>
+              <span className="font-black text-slate-700">
+                {subjects.length}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+      </div >
+    </div >
   );
 };
 

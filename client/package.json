@@ -1,5 +1,12 @@
 {
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/browser": "^8.0.5",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/filesystem": "^8.1.4",
+    "@capacitor/geolocation": "^8.2.3",
+    "@capacitor/share": "^8.0.3",
     "axios": "^1.15.0",
     "cra-template-pwa": "^2.0.0",
     "jspdf": "^4.2.1",

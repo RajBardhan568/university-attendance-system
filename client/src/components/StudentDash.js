@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { Geolocation } from '@capacitor/geolocation';
 import {
   CheckCircle,
   AlertCircle,
@@ -48,7 +49,7 @@ const StudentDash = () => {
   }, [regNo]);
 
   // --- 3. ATTENDANCE LOGIC ---
-  const markAttendance = async () => {
+ const markAttendance = async () => {
     if (!inputCode) return alert("Please enter a code");
 
     // Start Loader
@@ -58,37 +59,46 @@ const StudentDash = () => {
       navigator.userAgent + navigator.languages + window.screen.width,
     );
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        try {
-          const res = await axios.post(
-            "https://university-attendance-system-rqyy.onrender.com/api/student/mark-attendance",
-            {
-              regNo,
-              code: inputCode.trim().toUpperCase(),
-              deviceId: fingerprint,
-              lat: latitude,
-              lng: longitude,
-            },
-          );
+    try {
+      // 1. Pehle native/browser location permissions request karein
+      const permissions = await Geolocation.requestPermissions();
 
-          alert("✅ " + res.data.message);
-          setInputCode(""); // Clears the code from screen
-          fetchMyAttendance(); // Refresh the progress bars
-        } catch (err) {
-          alert("❌ " + (err.response?.data?.error || "Verification Failed"));
-        } finally {
-          // Stop Loader
-          setIsMarking(false);
-        }
-      },
-      (err) => {
+      if (permissions.location !== 'granted' && permissions.location !== 'limited') {
         alert("📍 Please enable Location Services to mark attendance.");
-        setIsMarking(false); // Stop loader if location is denied
-      },
-     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } // Professional addition for accuracy
-    );
+        setIsMarking(false);
+        return;
+      }
+
+      // 2. Location coordinates fetch karein
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      });
+
+      const { latitude, longitude } = position.coords;
+
+      // 3. Server par attendance request bhejein
+      const res = await axios.post(
+        "https://university-attendance-system-rqyy.onrender.com/api/student/mark-attendance",
+        {
+          regNo,
+          code: inputCode.trim().toUpperCase(),
+          deviceId: fingerprint,
+          lat: latitude,
+          lng: longitude,
+        },
+      );
+
+      alert("✅ " + res.data.message);
+      setInputCode(""); // Clears the code from screen
+      fetchMyAttendance(); // Refresh the progress bars
+    } catch (err) {
+      alert("❌ " + (err.response?.data?.error || "Verification Failed"));
+    } finally {
+      // Stop Loader
+      setIsMarking(false);
+    }
   };
 
   // --- 4. PROFILE LOGIC ---
