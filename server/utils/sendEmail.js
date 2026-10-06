@@ -1,25 +1,34 @@
-const sgMail = require('@sendgrid/mail');
+const brevo = require('@getbrevo/brevo');
 
 const sendEmail = async (email, subject, text) => {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  // 1. Brevo client setup
+  const apiInstance = new brevo.TransactionalEmailsApi();
+  apiInstance.setApiKey(
+    brevo.TransactionalEmailsApiApiKeys.apiKey,
+    process.env.BREVO_API_KEY
+  );
 
-  const msg = {
-    to: email, 
-    from: process.env.FROM_EMAIL, // This MUST match the email in your screenshot
-    subject: subject,
-    text: text,
+  // 2. Email payload
+  const sendSmtpEmail = new brevo.SendSmtpEmail();
+
+  // Yahan se student ko dikhega: "Attendance Management System"
+  sendSmtpEmail.sender = { 
+    name: "Attendance Management System", 
+    email: process.env.FROM_EMAIL || "rajbardhan568@gmail.com" // Wahi Gmail jo Brevo me registered/verified hai
   };
 
+  sendSmtpEmail.to = [{ email: email }];
+  sendSmtpEmail.subject = subject;
+  sendSmtpEmail.textContent = text;
+
+  // 3. Send email
   try {
-    await sgMail.send(msg);
-    console.log("✅ API Email sent successfully via SendGrid");
+    const response = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    console.log("✅ OTP successfully sent to:", email);
+    return response;
   } catch (error) {
-    console.error("❌ SendGrid Error:");
-    if (error.response) {
-      console.error(error.response.body);
-    } else {
-      console.error(error.message);
-    }
+    console.error("❌ Brevo Error:", error.response ? error.response.body : error.message);
+    throw error;
   }
 };
 
