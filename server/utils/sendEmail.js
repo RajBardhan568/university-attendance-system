@@ -1,33 +1,33 @@
-const brevo = require('@getbrevo/brevo');
+const Brevo = require('@getbrevo/brevo');
 
 const sendEmail = async (email, subject, text) => {
-  // 1. Brevo client setup
-  const apiInstance = new brevo.TransactionalEmailsApi();
+  // Brevo client instance
+  const apiInstance = new Brevo.TransactionalEmailsApi();
+  
+  // API key configure karein
   apiInstance.setApiKey(
-    brevo.TransactionalEmailsApiApiKeys.apiKey,
+    Brevo.TransactionalEmailsApiApiKeys.apiKey,
     process.env.BREVO_API_KEY
   );
 
-  // 2. Email payload
-  const sendSmtpEmail = new brevo.SendSmtpEmail();
+  const sendSmtpEmail = new Brevo.SendSmtpEmail();
 
-  // Yahan se student ko dikhega: "Attendance Management System"
+  // Yahan inbox me naam "Attendance Management System" show hoga
   sendSmtpEmail.sender = { 
     name: "Attendance Management System", 
-    email: process.env.FROM_EMAIL || "rajbardhan568@gmail.com" // Wahi Gmail jo Brevo me registered/verified hai
+    email: process.env.FROM_EMAIL || "rajbardhan568@gmail.com" 
   };
 
   sendSmtpEmail.to = [{ email: email }];
   sendSmtpEmail.subject = subject;
   sendSmtpEmail.textContent = text;
 
-  // 3. Send email
   try {
-    const response = await apiInstance.sendTransacEmail(sendSmtpEmail);
-    console.log("✅ OTP successfully sent to:", email);
-    return response;
+    const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    console.log("✅ Email successfully sent via Brevo to:", email);
+    return data;
   } catch (error) {
-    console.error("❌ Brevo Error:", error.response ? error.response.body : error.message);
+    console.error("❌ Brevo API Error:", error.response ? error.response.body : error.message);
     throw error;
   }
 };
