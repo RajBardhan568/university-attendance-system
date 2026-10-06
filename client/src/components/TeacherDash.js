@@ -718,72 +718,93 @@ const TeacherDash = ({ teacherId }) => {
                     </div>
 
                     {/* CODE GENERATION CONTROLS */}
+                    {/* CODE GENERATION CONTROLS */}
+                    <div className="grid grid-cols-3 gap-2 items-end mb-4">
 
-                    {/* CLASS INPUT (FIXED) */}
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[9px] font-black text-slate-400 uppercase px-1">Class</span>
-                      <input
-                        type="number"
-                        min="1"
-                        max="5"
-                        placeholder="Class"
-                        className="bg-slate-50 p-2 rounded-xl text-[10px] font-bold border border-slate-100 outline-none text-center w-full"
-                        value={manualIncrements[sub._id] !== undefined ? manualIncrements[sub._id] : ""}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === "") {
-                            setManualIncrements({
-                              ...manualIncrements,
-                              [sub._id]: "",
-                            });
-                            return;
-                          }
-                          let num = Number(val);
-                          if (num > 5) {
-                            alert("⚠️ Max increment quantity allowed is 5.");
-                            num = 5;
-                          }
-                          setManualIncrements({
-                            ...manualIncrements,
-                            [sub._id]: num,
-                          });
-                        }}
-                      />
-                    </div>
-
-                    {/* TIME DROPDOWN */}
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[9px] font-black text-slate-400 uppercase px-1">Time</span>
-                      <select
-                        className="bg-slate-50 p-2 rounded-xl text-[10px] font-bold border border-slate-100 outline-none"
-                        value={selectedTime[sub._id] || "5"}
-                        onChange={(e) =>
-                          setSelectedTime({
-                            ...selectedTime,
-                            [sub._id]: e.target.value,
-                          })
-                        }
-                      >
-                        <option value="2">2 min</option>
-                        <option value="5">5 min</option>
-                        <option value="10">10 min</option>
-                      </select>
-                    </div>
-
-                    {/* MANUAL RANGE INPUT */}
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[9px] font-black text-slate-400 uppercase px-1">Range (in Meters)</span>
-                      <div className="flex items-center gap-1">
+                      {/* 1. CLASS INPUT (Default: 1) */}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[9px] font-black text-slate-400 uppercase px-1">Class</span>
                         <input
                           type="number"
-                          min="10"
-                          max="100"
-                          className="bg-slate-50 p-2 rounded-xl text-[10px] font-bold border border-slate-100 outline-none w-full"
-                          value={selectedRange[sub._id] ?? 30} // Default 30m set rahega agar kuch na ho
-
+                          min="1"
+                          max="5"
+                          placeholder="Class"
+                          className="bg-slate-50 p-2 rounded-xl text-[10px] font-bold border border-slate-100 outline-none text-center w-full"
+                          value={manualIncrements[sub._id] !== undefined ? manualIncrements[sub._id] : "1"}
                           onChange={(e) => {
-                            let val = e.target.value;
-                            if (val !== "") {
+                            const val = e.target.value;
+                            if (val === "") {
+                              setManualIncrements({
+                                ...manualIncrements,
+                                [sub._id]: "",
+                              });
+                              return;
+                            }
+                            let num = Number(val);
+                            if (num > 5) {
+                              alert("⚠️ Max increment quantity allowed is 5.");
+                              num = 5;
+                            }
+                            setManualIncrements({
+                              ...manualIncrements,
+                              [sub._id]: num,
+                            });
+                          }}
+                        />
+                      </div>
+
+                      {/* 2. TIME MANUAL INPUT (Default: 5 min, Max: 30 min) */}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[9px] font-black text-slate-400 uppercase px-1">Time (min)</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="30"
+                          placeholder="Time"
+                          className="bg-slate-50 p-2 rounded-xl text-[10px] font-bold border border-slate-100 outline-none text-center w-full"
+                          value={selectedTime[sub._id] !== undefined ? selectedTime[sub._id] : "5"}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "") {
+                              setSelectedTime({
+                                ...selectedTime,
+                                [sub._id]: "",
+                              });
+                              return;
+                            }
+                            let num = Number(val);
+                            if (num > 30) {
+                              alert("⚠️ Maximum time limit is 30 minutes!");
+                              num = 30;
+                            }
+                            setSelectedTime({
+                              ...selectedTime,
+                              [sub._id]: num,
+                            });
+                          }}
+                        />
+                      </div>
+
+                      {/* 3. RANGE MANUAL INPUT (Default: 30m, Max: 100m) */}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[9px] font-black text-slate-400 uppercase px-1">Range (m)</span>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min="10"
+                            max="100"
+                            placeholder="Range"
+                            className="bg-slate-50 p-2 rounded-xl text-[10px] font-bold border border-slate-100 outline-none w-full text-center"
+                            value={selectedRange[sub._id] !== undefined ? selectedRange[sub._id] : "30"}
+                            onChange={(e) => {
+                              let val = e.target.value;
+                              if (val === "") {
+                                setSelectedRange({
+                                  ...selectedRange,
+                                  [sub._id]: "",
+                                });
+                                return;
+                              }
                               let num = Number(val);
                               if (num > 100) {
                                 alert("⚠️ Maximum range limit is 100 meters!");
@@ -792,18 +813,15 @@ const TeacherDash = ({ teacherId }) => {
                                 alert("⚠️ Minimum range limit is 10 meters!");
                                 num = 10;
                               }
-                              val = num;
-                            }
-                            const updated = {
-                              ...selectedRange,
-                              [sub._id]: val,
-                            };
-                            setSelectedRange(updated);
-                            localStorage.setItem('teacherSelectedRange', JSON.stringify(updated));
-                          }}
-                        />
-                        <span className="text-[10px] font-bold text-slate-500">m</span>
+                              setSelectedRange({
+                                ...selectedRange,
+                                [sub._id]: num,
+                              });
+                            }}
+                          />
+                        </div>
                       </div>
+
                     
 
                     {/* 3. The Generate Button (Full Width, No Overlap) */}
