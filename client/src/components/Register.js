@@ -96,7 +96,7 @@ const handleInitialSubmit = async (e) => {
   if (file && role === "student") data.append("profilePhoto", file);
 
   try {
-    await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/register", data, { timeout: 15000 });
+    await axios.post("https://university-attendance-system-5zq5.vercel.app/api/auth/register", data, { timeout: 15000 });
     setStep(2);
     setTimer(30);
     setOtpExpiry(300);
@@ -115,7 +115,7 @@ const handleInitialSubmit = async (e) => {
   const handleResendOtp = async () => {
     setResendLoading(true);
     try {
-      await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/resend-otp", { email: formData.email });
+      await axios.post("https://university-attendance-system-5zq5.vercel.app/api/auth/resend-otp", { email: formData.email });
       setTimer(30);
       setCanResend(false);
       setOtpExpiry(300); // Reset expiry on resend
@@ -131,7 +131,7 @@ const handleInitialSubmit = async (e) => {
     if (otpExpiry === 0) return alert("OTP Expired. Please resend.");
     setLoading(true);
     try {
-      await axios.post("https://university-attendance-system-rqyy.onrender.com/api/auth/verify-otp", {
+      await axios.post("https://university-attendance-system-5zq5.vercel.app/api/auth/verify-otp", {
         email: formData.email,
         otp: otp,
       });

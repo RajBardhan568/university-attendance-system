@@ -36,7 +36,7 @@ const StudentDash = () => {
     if (!regNo) return;
     try {
       const res = await axios.get(
-        `https://university-attendance-system-rqyy.onrender.com/api/student/my-stats/${regNo}`,
+        `https://university-attendance-system-5zq5.vercel.app/api/student/my-stats/${regNo}`,
       );
       setAttendanceData(res.data);
     } catch (err) {
@@ -80,7 +80,7 @@ const StudentDash = () => {
 
       // 3. Server par attendance request bhejein
       const res = await axios.post(
-        "https://university-attendance-system-rqyy.onrender.com/api/student/mark-attendance",
+        "https://university-attendance-system-5zq5.vercel.app/api/student/mark-attendance",
         {
           regNo,
           code: inputCode.trim().toUpperCase(),
@@ -147,7 +147,7 @@ const StudentDash = () => {
       }
 
       const res = await axios.put(
-        `https://university-attendance-system-rqyy.onrender.com/api/student/update-profile/${user.regNo}`,
+        `https://university-attendance-system-5zq5.vercel.app/api/student/update-profile/${user.regNo}`,
         data,
         { headers: { "Content-Type": "multipart/form-data" } },
       );

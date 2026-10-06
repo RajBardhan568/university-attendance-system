@@ -34,7 +34,7 @@ const ForgotPassword = () => {
     setLoading(true);
     try {
       await axios.post(
-        "https://university-attendance-system-rqyy.onrender.com/api/auth/forgot-password",
+        "https://university-attendance-system-5zq5.vercel.app/api/auth/forgot-password",
         { email }
       );
       alert("OTP sent to your email!");
@@ -55,7 +55,7 @@ const ForgotPassword = () => {
     setLoading(true);
     try {
       await axios.post(
-        "https://university-attendance-system-rqyy.onrender.com/api/auth/forgot-password",
+        "https://university-attendance-system-5zq5.vercel.app/api/auth/forgot-password",
         { email }
       );
       alert("✨ New OTP code has been successfully sent to your email!");
@@ -85,7 +85,7 @@ const ForgotPassword = () => {
     setLoading(true);
     try {
       await axios.post(
-        "https://university-attendance-system-rqyy.onrender.com/api/auth/reset-password-otp", 
+        "https://university-attendance-system-5zq5.vercel.app/api/auth/reset-password-otp", 
         { email, otp, newPassword }
       );
       alert("Password reset successful! Redirecting to login...");

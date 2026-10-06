@@ -85,7 +85,7 @@ const TeacherDash = ({ teacherId }) => {
     try {
       // Updated URL to match the new session-count route
       const res = await axios.get(
-        `https://university-attendance-system-rqyy.onrender.com/api/teacher/session-count/${subjectId}`,
+        `https://university-attendance-system-5zq5.vercel.app/api/teacher/session-count/${subjectId}`,
       );
       setTodayCounts((prev) => ({ ...prev, [subjectId]: res.data.count }));
     } catch (err) {
@@ -96,7 +96,7 @@ const TeacherDash = ({ teacherId }) => {
   const fetchSubjects = async () => {
     try {
       const res = await axios.get(
-        `https://university-attendance-system-rqyy.onrender.com/api/teacher/my-subjects/${teacherId}`,
+        `https://university-attendance-system-5zq5.vercel.app/api/teacher/my-subjects/${teacherId}`,
       );
       setSubjects(res.data);
     } catch (err) {
@@ -119,7 +119,7 @@ const TeacherDash = ({ teacherId }) => {
     if (!searchQuery) return;
     try {
       const res = await axios.get(
-        `https://university-attendance-system-rqyy.onrender.com/api/teacher/search-student/${searchQuery}`,
+        `https://university-attendance-system-5zq5.vercel.app/api/teacher/search-student/${searchQuery}`,
       );
       setSearchResult(res.data);
     } catch (err) {
@@ -155,7 +155,7 @@ const TeacherDash = ({ teacherId }) => {
     try {
       // 2. Standard JSON (No FormData needed for Teachers)
       const res = await axios.put(
-        `https://university-attendance-system-rqyy.onrender.com/api/teacher/update-profile/${user._id}`,
+        `https://university-attendance-system-5zq5.vercel.app/api/teacher/update-profile/${user._id}`,
         { name: user.name, mobile: user.mobile },
       );
 
@@ -175,7 +175,7 @@ const TeacherDash = ({ teacherId }) => {
     e.preventDefault();
     try {
       const res = await axios.post(
-        "https://university-attendance-system-rqyy.onrender.com/api/teacher/add-subject",
+        "https://university-attendance-system-5zq5.vercel.app/api/teacher/add-subject",
         {
           subjectName: subjectForm.name,
           branch: subjectForm.branch,
@@ -210,7 +210,7 @@ const TeacherDash = ({ teacherId }) => {
         alert("📍 Location access required to generate secure codes.");
         setGeneratingMap((prev) => ({ ...prev, [subjectId]: false 
 
-          
+
         }));
         return;
       }
@@ -226,7 +226,7 @@ const TeacherDash = ({ teacherId }) => {
 
       // 3. Server par code generation ki request bhejein
       const res = await axios.post(
-        "https://university-attendance-system-rqyy.onrender.com/api/teacher/generate-code",
+        "https://university-attendance-system-5zq5.vercel.app/api/teacher/generate-code",
         {
           subjectId,
           incrementBy: Number(count),
@@ -262,7 +262,7 @@ const TeacherDash = ({ teacherId }) => {
       // 1. Download shuru hone ka message/loader
       alert("📥 Preparing your report, please wait...");
       const res = await axios.get(
-        `https://university-attendance-system-rqyy.onrender.com/api/teacher/subject-stats/${subject._id}`,
+        `https://university-attendance-system-5zq5.vercel.app/api/teacher/subject-stats/${subject._id}`,
       );
 
       const { stats, sessions } = res.data;
@@ -655,7 +655,7 @@ const TeacherDash = ({ teacherId }) => {
                           if (window.confirm("Delete this subject?")) {
                             try {
                               await axios.delete(
-                                `https://university-attendance-system-rqyy.onrender.com/api/teacher/delete-subject/${sub._id}`,
+                                `https://university-attendance-system-5zq5.vercel.app/api/teacher/delete-subject/${sub._id}`,
                               );
                               setSubjects(
                                 subjects.filter((s) => s._id !== sub._id),

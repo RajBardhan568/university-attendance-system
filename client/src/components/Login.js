@@ -25,7 +25,7 @@ const Login = () => {
     setLoading(true);
     try {
       const res = await axios.post(
-        "https://university-attendance-system-rqyy.onrender.com/api/auth/login",
+        "https://university-attendance-system-5zq5.vercel.app/api/auth/login",
         formData,
       );
 
