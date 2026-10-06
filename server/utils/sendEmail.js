@@ -1,33 +1,33 @@
-const Brevo = require('@getbrevo/brevo');
+const axios = require('axios');
 
 const sendEmail = async (email, subject, text) => {
-  // Brevo client instance
-  const apiInstance = new Brevo.TransactionalEmailsApi();
-  
-  // API key configure karein
-  apiInstance.setApiKey(
-    Brevo.TransactionalEmailsApiApiKeys.apiKey,
-    process.env.BREVO_API_KEY
-  );
-
-  const sendSmtpEmail = new Brevo.SendSmtpEmail();
-
-  // Yahan inbox me naam "Attendance Management System" show hoga
-  sendSmtpEmail.sender = { 
-    name: "Attendance Management System", 
-    email: process.env.FROM_EMAIL || "rajbardhan568@gmail.com" 
+  const data = {
+    sender: {
+      name: "Attendance Management System",
+      email: process.env.FROM_EMAIL || "rajbardhan568@gmail.com"
+    },
+    to: [
+      {
+        email: email
+      }
+    ],
+    subject: subject,
+    textContent: text
   };
 
-  sendSmtpEmail.to = [{ email: email }];
-  sendSmtpEmail.subject = subject;
-  sendSmtpEmail.textContent = text;
-
   try {
-    const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    const response = await axios.post('https://api.brevo.com/v3/smtp/email', data, {
+      headers: {
+        'accept': 'application/json',
+        'api-key': process.env.BREVO_API_KEY,
+        'content-type': 'application/json'
+      }
+    });
+
     console.log("✅ Email successfully sent via Brevo to:", email);
-    return data;
+    return response.data;
   } catch (error) {
-    console.error("❌ Brevo API Error:", error.response ? error.response.body : error.message);
+    console.error("❌ Brevo API Error:", error.response ? error.response.data : error.message);
     throw error;
   }
 };
