@@ -208,7 +208,10 @@ const TeacherDash = ({ teacherId }) => {
 
       if (permissions.location !== 'granted' && permissions.location !== 'limited') {
         alert("📍 Location access required to generate secure codes.");
-        setGeneratingMap((prev) => ({ ...prev, [subjectId]: false }));
+        setGeneratingMap((prev) => ({ ...prev, [subjectId]: false 
+
+          
+        }));
         return;
       }
 

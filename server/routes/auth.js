@@ -144,7 +144,7 @@ router.post("/forgot-password", async (req, res) => {
                 resetPasswordToken: otp, 
                 resetPasswordExpires: Date.now() + 600000 
             },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!user) return res.status(404).json({ error: "User not found" });

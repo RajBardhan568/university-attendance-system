@@ -224,7 +224,7 @@ router.put('/update-profile/:regNo', upload.single('profilePhoto'), async (req, 
         const updatedUser = await User.findOneAndUpdate(
             { regNo: req.params.regNo },
             { $set: updateData },
-            { new: true }
+            { returnDocument: 'after' }
         );
         res.json({ success: true, user: updatedUser });
     } catch (err) {
