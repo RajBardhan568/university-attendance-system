@@ -20,7 +20,7 @@ const Login = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleLogin = async (e) => {
+const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
@@ -30,18 +30,23 @@ const Login = () => {
       );
 
       localStorage.setItem("user", JSON.stringify(res.data.user));
-      // Use this to force the browser to reload the user state into App.js
-      window.location.href =
-        res.data.user.role ="/dashboard"
-      // Navigate based on role for a smoother SPA experience
+      if (res.data.token) {
+        localStorage.setItem("token", res.data.token);
+      }
+      localStorage.setItem("isLoggedIn", "true");
+
+      // Navigate based on role
       const userRole = res.data.user.role;
-      navigate(
-        userRole === "teacher" ? "/teacher-dashboard" : "/student-dashboard",
-      );
+      if (userRole === "teacher") {
+        navigate("/teacher-dashboard");
+      } else {
+        navigate("/student-dashboard");
+      }
+
     } catch (err) {
       if (err.response?.status === 403) {
         alert("Account not verified. Redirecting to verification...");
-        navigate("/verify-account", { state: { email: formData.email } });
+        navigate("/verify-angle", { state: { email: formData.email } });
       } else {
         alert(err.response?.data?.error || "Login failed");
       }
@@ -156,7 +161,7 @@ const Login = () => {
               </>
             )}
           </button>
-          
+
         </form>
 
         {/* Footer */}

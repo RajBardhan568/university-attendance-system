@@ -11,10 +11,10 @@ import ForgotPassword from "./components/ForgotPassword";
 import TeacherDash from "./components/TeacherDash";
 import StudentDash from "./components/StudentDash";
 import VerifyAccount from "./components/VerifyAccount";
-import Home from "./components/Home"; // Add this line
+import Home from "./components/Home";
 
 function App() {
-  // Global Footer Component to keep the return clean
+  // Global Footer Component
   const Footer = () => (
     <footer className="w-full py-8 text-center border-t border-slate-200 bg-white">
       <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]">
@@ -23,7 +23,7 @@ function App() {
     </footer>
   );
 
-  // This helper stays here, but we call it INSIDE the Route element
+  // Helper function to check stored user session
   const getAuthUser = () => {
     const savedUser = localStorage.getItem("user");
     return savedUser ? JSON.parse(savedUser) : null;
@@ -40,18 +40,45 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/verify-account" element={<VerifyAccount />} />
 
-            {/* Dynamic Protected Route */}
+            {/* Teacher Dashboard Protected Route */}
+            <Route
+              path="/teacher-dashboard"
+              element={
+                (() => {
+                  const currentUser = getAuthUser();
+                  if (!currentUser || currentUser.role !== "teacher") {
+                    return <Navigate to="/login" />;
+                  }
+                  return <TeacherDash teacherId={currentUser._id} />;
+                })()
+              }
+            />
+
+            {/* Student Dashboard Protected Route */}
+            <Route
+              path="/student-dashboard"
+              element={
+                (() => {
+                  const currentUser = getAuthUser();
+                  if (!currentUser || currentUser.role !== "student") {
+                    return <Navigate to="/login" />;
+                  }
+                  return <StudentDash regNo={currentUser.regNo} />;
+                })()
+              }
+            />
+
+            {/* General Dashboard Redirect Fallback */}
             <Route
               path="/dashboard"
               element={
                 (() => {
-                  const currentUser = getAuthUser(); // Re-checks storage every time we hit this route
+                  const currentUser = getAuthUser();
                   if (!currentUser) return <Navigate to="/login" />;
-                  
                   return currentUser.role === "teacher" ? (
-                    <TeacherDash teacherId={currentUser._id} />
+                    <Navigate to="/teacher-dashboard" />
                   ) : (
-                    <StudentDash regNo={currentUser.regNo} />
+                    <Navigate to="/student-dashboard" />
                   );
                 })()
               }
@@ -65,4 +92,3 @@ function App() {
 }
 
 export default App;
-
