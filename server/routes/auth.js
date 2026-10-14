@@ -11,15 +11,14 @@ const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString()
 // 1. REGISTER USER
 router.post('/register', upload.single('profilePhoto'), async (req, res) => {
     try {
-        const { name, email, role, password, mobile, regNo , branch} = req.body;
+        const { name, email, role, password, mobile, regNo, branch } = req.body;
         
         // --- 1. STRICT MULTI-FIELD VALIDATION ---
-        // Check if ANY of the unique fields are already verified in the system
         const existingVerifiedUser = await User.findOne({
             $or: [
                 { email: email },
                 { mobile: mobile },
-                ...(role === 'student' ? [{ regNo: regNo }] : []) // Only check regNo for students
+                ...(role === 'student' ? [{ regNo: regNo }] : [])
             ],
             isVerified: true
         });
@@ -35,7 +34,6 @@ router.post('/register', upload.single('profilePhoto'), async (req, res) => {
         }
 
         // --- 2. HANDLE UNVERIFIED RE-REGISTRATION ---
-        // If an unverified account exists with this email, allow update
         const unverifiedUser = await User.findOne({ email, isVerified: false });
 
         if (unverifiedUser) {
@@ -53,11 +51,12 @@ router.post('/register', upload.single('profilePhoto'), async (req, res) => {
             
             await unverifiedUser.save();
 
-            sendEmail(
+            // Await added for Vercel Serverless
+            await sendEmail(
                 email,
-                "Your New Verification Code",
+                "Your New Verification Code - AMS",
                 `Hello ${name}, your new code is: ${otp}`
-            ).catch(err => console.error("Re-register Email Error:", err));
+            );
 
             return res.status(201).json({ message: "Unverified account found. New OTP sent." });
         }
@@ -73,19 +72,21 @@ router.post('/register', upload.single('profilePhoto'), async (req, res) => {
 
         await newUser.save();
 
-        sendEmail(
+        // Await added for Vercel Serverless
+        await sendEmail(
             email,
-            "Your Verification Code",
+            "Your Verification Code - AMS",
             `Hello ${name}, your verification code is: ${otp}.`
-        ).catch(err => console.error("Registration Email Error:", err));
+        );
 
-        res.status(201).json({ message: "User registered. OTP sent." });
+        return res.status(201).json({ message: "User registered. OTP sent." });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error("Register Error:", err);
+        return res.status(500).json({ error: err.message });
     }
 });
 
-// 2. VERIFY REGISTRATION OTP (No changes needed)
+// 2. VERIFY REGISTRATION OTP
 router.post("/verify-otp", async (req, res) => {
     try {
         const { email, otp } = req.body;
@@ -97,9 +98,9 @@ router.post("/verify-otp", async (req, res) => {
         user.verificationToken = undefined; 
         await user.save();
 
-        res.json({ message: "Account verified successfully! You can now login." });
+        return res.json({ message: "Account verified successfully! You can now login." });
     } catch (err) {
-        res.status(500).json({ error: "Verification failed" });
+        return res.status(500).json({ error: "Verification failed" });
     }
 });
 
@@ -119,16 +120,15 @@ router.post('/login', async (req, res) => {
             user.verificationToken = otp;
             await user.save();
 
-            // UPDATE: Removed 'await'
-            sendEmail(user.email, "Verify Your Account", `Your code is: ${otp}`)
-                .catch(err => console.error("Login Email Error:", err));
+            // Await added for Vercel
+            await sendEmail(user.email, "Verify Your Account - AMS", `Your code is: ${otp}`);
 
             return res.status(403).json({ error: "Please verify your email before logging in." });
         }
 
-        res.json({ user });
+        return res.json({ user });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        return res.status(500).json({ error: err.message });
     }
 });
 
@@ -149,17 +149,16 @@ router.post("/forgot-password", async (req, res) => {
 
         if (!user) return res.status(404).json({ error: "User not found" });
 
-        // UPDATE: Removed 'await'
-        sendEmail(email, "Password Reset OTP", `Your password reset code is: ${otp}`)
-            .catch(err => console.error("Forgot Pass Email Error:", err));
+        // Await added for Vercel
+        await sendEmail(email, "Password Reset OTP - AMS", `Your password reset code is: ${otp}`);
 
-        res.json({ message: "Reset OTP sent to your email!" });
+        return res.json({ message: "Reset OTP sent to your email!" });
     } catch (err) {
-        res.status(500).json({ error: "Failed to send reset OTP" });
+        return res.status(500).json({ error: "Failed to send reset OTP" });
     }
 });
 
-// 5. RESET PASSWORD (No changes needed)
+// 5. RESET PASSWORD
 router.post("/reset-password-otp", async (req, res) => {
     try {
         const { email, otp, newPassword } = req.body;
@@ -177,9 +176,9 @@ router.post("/reset-password-otp", async (req, res) => {
         user.resetPasswordExpires = undefined;
         await user.save();
 
-        res.json({ message: "Password updated successfully!" });
+        return res.json({ message: "Password updated successfully!" });
     } catch (err) {
-        res.status(500).json({ error: "Reset failed" });
+        return res.status(500).json({ error: "Reset failed" });
     }
 });
 
@@ -196,13 +195,12 @@ router.post("/resend-otp", async (req, res) => {
         user.verificationToken = newOtp;
         await user.save();
 
-        // UPDATE: Removed 'await'
-        sendEmail(email, "Your New Verification Code", `Your new code is: ${newOtp}`)
-            .catch(err => console.error("Resend Email Error:", err));
+        // Await added for Vercel
+        await sendEmail(email, "Your New Verification Code - AMS", `Your new code is: ${newOtp}`);
 
-        res.json({ message: "New OTP sent to your email!" });
+        return res.json({ message: "New OTP sent to your email!" });
     } catch (err) {
-        res.status(500).json({ error: "Failed to resend OTP" });
+        return res.status(500).json({ error: "Failed to resend OTP" });
     }
 });
 
