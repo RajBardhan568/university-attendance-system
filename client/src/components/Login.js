@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { Preferences } from '@capacitor/preferences';
 import {
   Mail,
   Lock,
@@ -29,12 +30,22 @@ const handleLogin = async (e) => {
         formData,
       );
 
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-      if (res.data.token) {
-        localStorage.setItem("token", res.data.token);
-      }
-      localStorage.setItem("isLoggedIn", "true");
+await Preferences.set({
+      key: 'user',
+      value: JSON.stringify(res.data.user),
+    });
 
+    if (res.data.token) {
+      await Preferences.set({
+        key: 'token',
+        value: res.data.token,
+      });
+    }
+    
+    await Preferences.set({
+      key: 'isLoggedIn',
+      value: 'true',
+    });
       // Navigate based on role
       const userRole = res.data.user.role;
       if (userRole === "teacher") {

@@ -1,19 +1,48 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
-  BrowserRouter as Router,
+  HashRouter as Router,
   Routes,
   Route,
   Navigate,
+  useNavigate,
+  useLocation,
 } from "react-router-dom";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import ForgotPassword from "./components/ForgotPassword";
+import { App as CapacitorApp } from '@capacitor/app';
 import TeacherDash from "./components/TeacherDash";
 import StudentDash from "./components/StudentDash";
 import VerifyAccount from "./components/VerifyAccount";
 import Home from "./components/Home";
 
-function App() {
+// 1. Naya sub-component banaya taaki useNavigate aur useLocation Router ke andar chalein
+function AppContent() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Hardware back button listener register karein
+    const backListener = CapacitorApp.addListener('backButton', () => {
+      const currentHash = window.location.hash; // Yeh "#/", "#/login", "#/register" etc. dega
+
+      // Agar user Home/Landing screen ya Login screen par hai
+      if (currentHash === '#/' || currentHash === '#/login' || currentHash === '' || currentHash === '#') {
+        const confirmExit = window.confirm("Do you want to exit app?");
+        if (confirmExit) {
+          CapacitorApp.exitApp();
+        }
+      } else {
+        // Agar kisi aur page par hai (jaise Register ya Dashboards), toh pichle page par jayein
+        navigate(-1);
+      }
+    });
+
+    return () => {
+      backListener.then(handler => handler.remove());
+    };
+  }, [navigate, location]);
+
   // Global Footer Component
   const Footer = () => (
     <footer className="w-full py-8 text-center border-t border-slate-200 bg-white">
@@ -30,65 +59,70 @@ function App() {
   };
 
   return (
-    <Router>
-      <div className="min-h-screen flex flex-col bg-slate-50">
-        <div className="flex-grow">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/verify-account" element={<VerifyAccount />} />
+    <div className="min-h-screen flex flex-col bg-slate-50">
+      <div className="flex-grow">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/verify-account" element={<VerifyAccount />} />
 
-            {/* Teacher Dashboard Protected Route */}
-            <Route
-              path="/teacher-dashboard"
-              element={
-                (() => {
-                  const currentUser = getAuthUser();
-                  if (!currentUser || currentUser.role !== "teacher") {
-                    return <Navigate to="/login" />;
-                  }
-                  return <TeacherDash teacherId={currentUser._id} />;
-                })()
-              }
-            />
+          {/* Teacher Dashboard Protected Route */}
+          <Route
+            path="/teacher-dashboard"
+            element={
+              (() => {
+                const currentUser = getAuthUser();
+                if (!currentUser || currentUser.role !== "teacher") {
+                  return <Navigate to="/login" />;
+                }
+                return <TeacherDash teacherId={currentUser._id} />;
+              })()
+            }
+          />
 
-            {/* Student Dashboard Protected Route */}
-            <Route
-              path="/student-dashboard"
-              element={
-                (() => {
-                  const currentUser = getAuthUser();
-                  if (!currentUser || currentUser.role !== "student") {
-                    return <Navigate to="/login" />;
-                  }
-                  return <StudentDash regNo={currentUser.regNo} />;
-                })()
-              }
-            />
+          {/* Student Dashboard Protected Route */}
+          <Route
+            path="/student-dashboard"
+            element={
+              (() => {
+                const currentUser = getAuthUser();
+                if (!currentUser || currentUser.role !== "student") {
+                  return <Navigate to="/login" />;
+                }
+                return <StudentDash regNo={currentUser.regNo} />;
+              })()
+            }
+          />
 
-            {/* General Dashboard Redirect Fallback */}
-            <Route
-              path="/dashboard"
-              element={
-                (() => {
-                  const currentUser = getAuthUser();
-                  if (!currentUser) return <Navigate to="/login" />;
-                  return currentUser.role === "teacher" ? (
-                    <Navigate to="/teacher-dashboard" />
-                  ) : (
-                    <Navigate to="/student-dashboard" />
-                  );
-                })()
-              }
-            />
-          </Routes>
-        </div>
-        <Footer />
+          {/* General Dashboard Redirect Fallback */}
+          <Route
+            path="/dashboard"
+            element={
+              (() => {
+                const currentUser = getAuthUser();
+                if (!currentUser) return <Navigate to="/login" />;
+                return currentUser.role === "teacher" ? (
+                  <Navigate to="/teacher-dashboard" />
+                ) : (
+                  <Navigate to="/student-dashboard" />
+                );
+              })()
+            }
+          />
+        </Routes>
       </div>
-    </Router>
+      <Footer />
+    </div>
   );
 }
 
-export default App;
+// Main App Component jisme HashRouter wrap kiya gaya hai
+export default function App() {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
+  );
+}

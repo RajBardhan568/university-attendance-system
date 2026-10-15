@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Geolocation } from '@capacitor/geolocation';
+import { Preferences } from '@capacitor/preferences';
 import {
   CheckCircle,
   AlertCircle,
@@ -165,14 +166,15 @@ const StudentDash = () => {
       setLoading(false);
     }
   };
-const handleLogout = () => {
+const handleLogout = async () => {
   // Pop up a confirmation dialog box
   const isConfirmed = window.confirm("Are you sure you want to logout?");
   
   // If the user clicks "OK", clear data and redirect
   if (isConfirmed) {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
+    await Preferences.remove({ key: 'user' });
+    await Preferences.remove({ key: 'token' });
+    await Preferences.remove({ key: 'isLoggedIn' });
     // If you are using React Router use: navigate("/login");
     window.location.href = "/login"; 
   }
