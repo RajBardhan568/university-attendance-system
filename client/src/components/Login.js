@@ -46,7 +46,7 @@ const handleLogin = async (e) => {
     } catch (err) {
       if (err.response?.status === 403) {
         alert("Account not verified. Redirecting to verification...");
-        navigate("/verify-angle", { state: { email: formData.email } });
+        navigate("/verify-account", { state: { email: formData.email } });
       } else {
         alert(err.response?.data?.error || "Login failed");
       }

@@ -136,11 +136,13 @@ const TeacherDash = ({ teacherId }) => {
     if (isConfirmed) {
       localStorage.removeItem("user");
       localStorage.removeItem("token");
+      localStorage.removeItem("isLoggedIn");
       // If you are using React Router use: navigate("/login");
       window.location.href = "/login";
     }
     // If they click "Cancel", nothing happens and they stay logged in
   };
+
   // Simplified Update for Teacher (Name + Mobile Only)
   const handleUpdateProfile = async () => {
     // 1. Validations
