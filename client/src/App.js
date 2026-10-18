@@ -92,7 +92,7 @@ if (loading) {
             path="/teacher-dashboard"
             element={
               (() => {
-                const currentUser = getAuthUser();
+                // const currentUser = getAuthUser();
                 if (!currentUser || currentUser.role !== "teacher") {
                   return <Navigate to="/login" />;
                 }
@@ -106,7 +106,7 @@ if (loading) {
             path="/student-dashboard"
             element={
               (() => {
-                const currentUser = getAuthUser();
+                // const currentUser = getAuthUser();
                 if (!currentUser || currentUser.role !== "student") {
                   return <Navigate to="/login" />;
                 }
@@ -120,7 +120,7 @@ if (loading) {
             path="/dashboard"
             element={
               (() => {
-                const currentUser = getAuthUser();
+                // const currentUser = getAuthUser();
                 if (!currentUser) return <Navigate to="/login" />;
                 return currentUser.role === "teacher" ? (
                   <Navigate to="/teacher-dashboard" />
