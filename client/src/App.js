@@ -11,6 +11,7 @@ import Login from "./components/Login";
 import Register from "./components/Register";
 import ForgotPassword from "./components/ForgotPassword";
 import { App as CapacitorApp } from '@capacitor/app';
+import { Preferences } from '@capacitor/preferences'; 
 import TeacherDash from "./components/TeacherDash";
 import StudentDash from "./components/StudentDash";
 import VerifyAccount from "./components/VerifyAccount";
@@ -20,6 +21,26 @@ import Home from "./components/Home";
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkUserSession = async () => {
+      try {
+        const { value } = await Preferences.get({ key: 'user' });
+        if (value) {
+          setCurrentUser(JSON.parse(value));
+        }
+      } catch (error) {
+        console.error("Failed to load user session", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkUserSession();
+  }, [location]);
+
+
 
   useEffect(() => {
     // Hardware back button listener register karein
@@ -52,11 +73,9 @@ function AppContent() {
     </footer>
   );
 
-  // Helper function to check stored user session
-  const getAuthUser = () => {
-    const savedUser = localStorage.getItem("user");
-    return savedUser ? JSON.parse(savedUser) : null;
-  };
+if (loading) {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">

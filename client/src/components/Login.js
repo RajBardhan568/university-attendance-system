@@ -29,7 +29,7 @@ const handleLogin = async (e) => {
         "https://university-attendance-system-5zq5.vercel.app/api/auth/login",
         formData,
       );
-
+// for Capacitor Preferences storage
 await Preferences.set({
       key: 'user',
       value: JSON.stringify(res.data.user),
@@ -46,7 +46,10 @@ await Preferences.set({
       key: 'isLoggedIn',
       value: 'true',
     });
-      // Navigate based on role
+
+
+
+//       // Navigate based on role
       const userRole = res.data.user.role;
       if (userRole === "teacher") {
         navigate("/teacher-dashboard");
