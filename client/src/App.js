@@ -44,20 +44,28 @@ function AppContent() {
 
   useEffect(() => {
     // Hardware back button listener register karein
-    const backListener = CapacitorApp.addListener('backButton', () => {
+    const backListener = CapacitorApp.addListener('backButton', async () => {
       const currentHash = window.location.hash; // Yeh "#/", "#/login", "#/register" etc. dega
 
-      // Agar user Home/Landing screen ya Login screen par hai
-      if (currentHash === '#/' || currentHash === '#/login' || currentHash === '' || currentHash === '#') {
-        const confirmExit = window.confirm("Do you want to exit app?");
-        if (confirmExit) {
-          CapacitorApp.exitApp();
-        }
-      } else {
-        // Agar kisi aur page par hai (jaise Register ya Dashboards), toh pichle page par jayein
-        navigate(-1);
+    if (currentHash.includes('teacher-dashboard') || currentHash.includes('student-dashboard')) {
+      const confirmLogout = window.confirm("Kya aap logout karna chahte hain?");
+      if (confirmLogout) {
+        // Preferences se session clear kar dein
+        await Preferences.remove({ key: 'user' });
+        await Preferences.remove({ key: 'token' });
+        await Preferences.remove({ key: 'isLoggedIn' });
+        navigate('/login', { replace: true });
       }
-    });
+      }else if (currentHash === '#/' || currentHash === '#/login' || currentHash === '' || currentHash === '#') {
+      const confirmExit = window.confirm("Do you want to exit app?");
+      if (confirmExit) {
+        CapacitorApp.exitApp();
+      }
+    } else {
+      // Baki pages ke liye normal back navigation
+      navigate(-1);
+    }
+  });
 
     return () => {
       backListener.then(handler => handler.remove());

@@ -30,19 +30,19 @@ const handleLogin = async (e) => {
         formData,
       );
 // for Capacitor Preferences storage
-await Preferences.set({
+ Preferences.set({
       key: 'user',
       value: JSON.stringify(res.data.user),
     });
 
     if (res.data.token) {
-      await Preferences.set({
+       Preferences.set({
         key: 'token',
         value: res.data.token,
       });
     }
     
-    await Preferences.set({
+    Preferences.set({
       key: 'isLoggedIn',
       value: 'true',
     });
@@ -52,9 +52,9 @@ await Preferences.set({
 //       // Navigate based on role
       const userRole = res.data.user.role;
       if (userRole === "teacher") {
-        navigate("/teacher-dashboard");
+        navigate("/teacher-dashboard", { replace: true });
       } else {
-        navigate("/student-dashboard");
+        navigate("/student-dashboard", { replace: true });
       }
 
     } catch (err) {
