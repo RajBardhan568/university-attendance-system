@@ -48,7 +48,7 @@ function AppContent() {
       const currentHash = window.location.hash; // Yeh "#/", "#/login", "#/register" etc. dega
 
     if (currentHash.includes('teacher-dashboard') || currentHash.includes('student-dashboard')) {
-      const confirmLogout = window.confirm("Kya aap logout karna chahte hain?");
+      const confirmLogout = window.confirm("Do you want to logout app?");
       if (confirmLogout) {
         // Preferences se session clear kar dein
         await Preferences.remove({ key: 'user' });
