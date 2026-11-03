@@ -4,6 +4,8 @@ const User = require("../models/User");
 const Subject = require("../models/Subject");
 const Attendance = require("../models/Attendance");
 const upload = require('../cloudinaryConfig');
+const bcrypt = require("bcryptjs");
+const sendEmail = require("../utils/sendEmail");
 
 // ==========================================
 // 1. MARK ATTENDANCE
@@ -232,5 +234,66 @@ router.put('/update-profile/:regNo', upload.single('profilePhoto'), async (req, 
     }
 });
 
+//Account Deletion OTP Store (In-Memory)
+const deleteOtpStore = new Map();
+
+// 1. Send OTP for Account Deletion
+router.post("/send-delete-otp", async (req, res) => {
+  try {
+    const { regNo } = req.body;
+    const student = await User.findOne({ regNo, role: "student" });
+    if (!student) return res.status(404).json({ error: "Student not found." });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    deleteOtpStore.set(student.email, {
+      otp,
+      expiresAt: Date.now() + 5 * 60 * 1000, // Valid for 5 minutes
+    });
+
+    await sendEmail(
+      student.email,
+      "AMS Account Deletion OTP",
+      `Your OTP to permanently delete your AMS student account is: ${otp}. It is valid for 5 minutes.`
+    );
+
+    res.status(200).json({ message: "OTP sent to your registered email." });
+  } catch (err) {
+    console.error("Send Delete OTP Error:", err);
+    res.status(500).json({ error: "Failed to send OTP." });
+  }
+});
+
+// 2. Verify (Password OR OTP) & Execute Account Deletion
+router.post("/delete-account", async (req, res) => {
+  try {
+    const { regNo, method, password, otp } = req.body;
+    const student = await User.findOne({ regNo, role: "student" });
+    if (!student) return res.status(404).json({ error: "Student not found." });
+
+    // Verify Identity via Password OR OTP
+    if (method === "password") {
+      if (!password) return res.status(400).json({ error: "Password required." });
+      const isMatch = await bcrypt.compare(password, student.password);
+      if (!isMatch) return res.status(401).json({ error: "Incorrect password." });
+    } else if (method === "otp") {
+      const record = deleteOtpStore.get(student.email);
+      if (!record || record.otp !== otp || Date.now() > record.expiresAt) {
+        return res.status(401).json({ error: "Invalid or expired OTP." });
+      }
+      deleteOtpStore.delete(student.email);
+    } else {
+      return res.status(400).json({ error: "Invalid verification method." });
+    }
+
+    // Step 5: Execute permanent deletion
+    await Attendance.deleteMany({ regNo });
+    await User.findByIdAndDelete(student._id);
+
+    res.status(200).json({ message: "Student account deleted permanently." });
+  } catch (err) {
+    console.error("Delete Student Error:", err);
+    res.status(500).json({ error: "Failed to delete student account." });
+  }
+});
 
 module.exports = router;

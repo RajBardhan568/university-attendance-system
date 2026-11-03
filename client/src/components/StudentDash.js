@@ -21,6 +21,17 @@ import {
 
 const StudentDash = ({ initialUser }) => {
   // --- 1. STATES ---
+// -----------------------delete account-----------------------
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+const [verifyMethod, setVerifyMethod] = useState("password"); // "password" or "otp"
+const [deletePassword, setDeletePassword] = useState("");
+const [deleteOtp, setDeleteOtp] = useState("");
+const [otpSent, setOtpSent] = useState(false);
+const [sendingOtp, setSendingOtp] = useState(false);
+const [deleting, setDeleting] = useState(false);
+// -----------------------End-----------------------
+
+
   const [view, setView] = useState("dashboard"); // dashboard or profile
   const [attendanceData, setAttendanceData] = useState([]);
   const [inputCode, setInputCode] = useState("");
@@ -220,6 +231,64 @@ const handleLogout = async () => {
     window.location.href = "#/login"; 
   }
   // If they click "Cancel", nothing happens and they stay logged in
+};
+
+const handleSendDeleteOtp = async () => {
+  setSendingOtp(true);
+  try {
+    await axios.post(
+      "https://university-attendance-system-5zq5.vercel.app/api/student/send-delete-otp",
+      { regNo: user.regNo }
+    );
+    setOtpSent(true);
+    alert("📩 A 6-digit OTP has been sent to your registered email.");
+  } catch (err) {
+    alert(err.response?.data?.error || "Failed to send OTP.");
+  } finally {
+    setSendingOtp(false);
+  }
+};
+
+const handleDeleteAccount = async (e) => {
+  e.preventDefault();
+
+  if (verifyMethod === "password" && !deletePassword.trim()) {
+    return alert("Please enter your password.");
+  }
+  if (verifyMethod === "otp" && deleteOtp.trim().length !== 6) {
+    return alert("Please enter the 6-digit OTP sent to your email.");
+  }
+
+  // Step 3 & 4: Confirmation Dialog
+  const isConfirmed = window.confirm(
+    "⚠️ Are you sure you want to permanently delete your account? This action cannot be undone."
+  );
+  if (!isConfirmed) return;
+
+  // Step 5: Backend Execution
+  setDeleting(true);
+  try {
+    await axios.post(
+      "https://university-attendance-system-5zq5.vercel.app/api/student/delete-account",
+      {
+        regNo: user.regNo,
+        method: verifyMethod,
+        password: deletePassword,
+        otp: deleteOtp.trim(),
+      }
+    );
+
+    await Preferences.remove({ key: "user" });
+    await Preferences.remove({ key: "token" });
+    await Preferences.remove({ key: "isLoggedIn" });
+
+    alert("✅ Your account has been permanently deleted.");
+    window.location.hash = "#/login";
+  } catch (err) {
+    alert("❌ " + (err.response?.data?.error || "Verification failed."));
+  } finally {
+    setDeleting(false);
+  }
 };
 
   return (
@@ -529,6 +598,109 @@ const handleLogout = async () => {
                   </button>
                 </>
               )}
+              {/* Step 1: Delete Account Trigger Button */}
+<div className="mt-6 pt-5 border-t border-rose-100">
+  <button
+    type="button"
+    onClick={() => {
+      setDeletePassword("");
+      setDeleteOtp("");
+      setOtpSent(false);
+      setShowDeleteModal(true);
+    }}
+    className="w-full py-3 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold text-sm border border-rose-200 transition-all active:scale-95"
+  >
+    Delete Account Permanently
+  </button>
+</div>
+
+{/* Step 2: Dual Verification Modal (Password OR Email OTP) */}
+{showDeleteModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100">
+      <h3 className="text-lg font-bold text-slate-800">Verify Your Identity</h3>
+      <p className="text-xs text-slate-500 mt-1">
+        Verify using your password or an email OTP to delete your account.
+      </p>
+
+      {/* Switch Tabs: Password vs OTP */}
+      <div className="flex bg-slate-100 p-1 rounded-xl mt-4">
+        <button
+          type="button"
+          onClick={() => setVerifyMethod("password")}
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+            verifyMethod === "password"
+              ? "bg-white text-slate-800 shadow-sm"
+              : "text-slate-500"
+          }`}
+        >
+          Use Password
+        </button>
+        <button
+          type="button"
+          onClick={() => setVerifyMethod("otp")}
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+            verifyMethod === "otp"
+              ? "bg-white text-slate-800 shadow-sm"
+              : "text-slate-500"
+          }`}
+        >
+          Use Email OTP
+        </button>
+      </div>
+
+      <form onSubmit={handleDeleteAccount} className="mt-4 space-y-4">
+        {verifyMethod === "password" ? (
+          <input
+            type="password"
+            placeholder="Enter your password"
+            value={deletePassword}
+            onChange={(e) => setDeletePassword(e.target.value)}
+            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+          />
+        ) : (
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                maxLength={6}
+                placeholder="Enter 6-digit OTP"
+                value={deleteOtp}
+                onChange={(e) => setDeleteOtp(e.target.value.replace(/\D/g, ""))}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+              />
+              <button
+                type="button"
+                onClick={handleSendDeleteOtp}
+                disabled={sendingOtp}
+                className="px-3 py-2.5 rounded-xl bg-indigo-50 text-indigo-600 font-semibold text-xs border border-indigo-200 whitespace-nowrap disabled:opacity-50"
+              >
+                {sendingOtp ? "Sending..." : otpSent ? "Resend OTP" : "Send OTP"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() => setShowDeleteModal(false)}
+            className="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-semibold text-sm"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={deleting}
+            className="flex-1 py-2.5 rounded-xl bg-rose-600 text-white font-semibold text-sm shadow-md shadow-rose-500/20 disabled:opacity-50"
+          >
+            {deleting ? "Deleting..." : "Verify & Delete"}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
 
               <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest pt-4">
                 Administrative records are managed by the faculty.

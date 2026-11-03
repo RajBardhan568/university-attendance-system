@@ -4,6 +4,8 @@ const Subject = require("../models/Subject");
 const Attendance = require("../models/Attendance");
 const User = require("../models/User");
 const Session = require('../models/Session');
+const bcrypt = require("bcryptjs");
+const sendEmail = require("../utils/sendEmail");
 
 // 1. CREATE SUBJECT (Added branch support)
 router.post("/add-subject", async (req, res) => {
@@ -135,8 +137,6 @@ router.post("/generate-code", async (req, res) => {
     res.status(500).json({ error: "Server failed to generate session code" });
   }
 });
-// 1. DELETE SUBJECT - This was crashing because of the model error
-// server/routes/teacher.js
 
 // ROUTE: Delete a subject and its associated attendance
 router.delete("/delete-subject/:id", async (req, res) => {
@@ -226,6 +226,68 @@ router.put('/update-profile/:id', async (req, res) => {
 });
 
 
+// ROUTE: Delete Teacher Account
+const teacherDeleteOtpStore = new Map();
+
+// 1. Send OTP for Teacher Account Deletion
+router.post("/send-delete-otp", async (req, res) => {
+  try {
+    const { teacherId, email } = req.body;
+    const teacher = await User.findOne(
+      teacherId ? { _id: teacherId, role: "teacher" } : { email, role: "teacher" }
+    );
+    if (!teacher) return res.status(404).json({ error: "Teacher not found." });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    teacherDeleteOtpStore.set(teacher.email, {
+      otp,
+      expiresAt: Date.now() + 5 * 60 * 1000,
+    });
+
+    await sendEmail(
+      teacher.email,
+      "AMS Teacher Account Deletion OTP",
+      `Your OTP to permanently delete your AMS teacher account is: ${otp}. Valid for 5 minutes.`
+    );
+
+    res.status(200).json({ message: "OTP sent to your registered email." });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to send OTP." });
+  }
+});
+
+// 2. Verify (Password OR OTP) & Execute Teacher Account Deletion
+router.post("/delete-account", async (req, res) => {
+  try {
+    const { teacherId, email, method, password, otp } = req.body;
+    const teacher = await User.findOne(
+      teacherId ? { _id: teacherId, role: "teacher" } : { email, role: "teacher" }
+    );
+    if (!teacher) return res.status(404).json({ error: "Teacher not found." });
+
+    if (method === "password") {
+      if (!password) return res.status(400).json({ error: "Password required." });
+      const isMatch = await bcrypt.compare(password, teacher.password);
+      if (!isMatch) return res.status(401).json({ error: "Incorrect password." });
+    } else if (method === "otp") {
+      const record = teacherDeleteOtpStore.get(teacher.email);
+      if (!record || record.otp !== otp || Date.now() > record.expiresAt) {
+        return res.status(401).json({ error: "Invalid or expired OTP." });
+      }
+      teacherDeleteOtpStore.delete(teacher.email);
+    } else {
+      return res.status(400).json({ error: "Invalid verification method." });
+    }
+
+    await Subject.deleteMany({ teacherId: teacher._id });
+    await Session.deleteMany({ teacherId: teacher._id });
+    await User.findByIdAndDelete(teacher._id);
+
+    res.status(200).json({ message: "Teacher account deleted permanently." });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete teacher account." });
+  }
+});
 
 
 module.exports = router;
