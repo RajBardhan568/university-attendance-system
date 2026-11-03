@@ -70,6 +70,10 @@ const [deleting, setDeleting] = useState(false);
 // ...............End of Account Deletion States.......... 
 
 // State Variables
+
+const [suggestions, setSuggestions] = useState([]);
+const [showSuggestions, setShowSuggestions] = useState(false);
+const [searchError, setSearchError] = useState("");
 const [view, setView] = useState("dashboard");
   const [subjects, setSubjects] = useState([]);
   const [subjectForm, setSubjectForm] = useState({
@@ -162,18 +166,51 @@ useEffect(() => {
   };
 }, [view, isEditing]);
 
-  const handleSearch = async () => {
-    if (!searchQuery) return;
+
+// Jaise hi teacher registration number type karega, suggestions fetch honge
+const handleInputChange = async (e) => {
+  const value = e.target.value;
+  setSearchQuery(value);
+  setSearchError("");
+
+  if (value.trim().length >= 1) {
     try {
       const res = await axios.get(
-        `https://university-attendance-system-5zq5.vercel.app/api/teacher/search-student/${searchQuery}`,
+        `https://university-attendance-system-5zq5.vercel.app/api/teacher/student-suggestions/${teacherId}?query=${value}`
       );
-      setSearchResult(res.data);
+      setSuggestions(res.data);
+      setShowSuggestions(true);
     } catch (err) {
-      alert("Student Not Found");
-      setSearchResult(null);
+      console.error("Suggestion Error:", err);
     }
-  };
+  } else {
+    setSuggestions([]);
+    setShowSuggestions(false);
+  }
+};
+
+// Updated Search Function (with custom Query / RegNo support)
+const handleSearch = async (customRegNo) => {
+  const queryToSearch = customRegNo || searchQuery;
+  if (!queryToSearch) return;
+
+  setShowSuggestions(false);
+  setSearchError("");
+
+  try {
+    const res = await axios.get(
+      `https://university-attendance-system-5zq5.vercel.app/api/teacher/search-student/${teacherId}/${queryToSearch}`
+    );
+    setSearchResult(res.data);
+  } catch (err) {
+    setSearchResult(null);
+    // Backend se aane wala exact appropriate message show karega
+    const errorMsg = err.response?.data?.error || "Student Not Found in your classes";
+    setSearchError(errorMsg);
+  }
+};
+
+
 
 const handleLogout = async () => {
   const isConfirmed = window.confirm("Are you sure you want to logout?");
@@ -585,101 +622,136 @@ const handleDeleteAccount = async (e) => {
 
         {view === "dashboard" ? (
           <div className="space-y-8">
-            {/* SEARCH - Full Width on mobile */}
-            <div className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                  size={18}
-                />
-                <input
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Student Registration Number..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <button
-                onClick={handleSearch}
-                className="bg-slate-900 text-white px-8 py-3 rounded-2xl font-bold transition-all active:scale-95"
-              >
-                Find Student
-              </button>
+{/* SEARCH - Full Width on mobile with Auto-Suggestions */}
+<div className="relative bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-3">
+  <div className="relative flex-1">
+    <Search
+      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+      size={18}
+    />
+    <input
+      className="w-full pl-11 pr-4 py-3 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500"
+      placeholder="Enter Student Registration Number..."
+      value={searchQuery}
+      onChange={handleInputChange} // <-- Yeh function aapne already likh rakha hai
+    />
+
+    {/* AUTO-SUGGESTION DROPDOWN */}
+    {showSuggestions && suggestions.length > 0 && (
+      <ul className="absolute z-30 left-0 right-0 bg-white border border-slate-200 rounded-2xl shadow-xl mt-2 max-h-60 overflow-y-auto">
+        {suggestions.map((item) => (
+          <li
+            key={item.regNo}
+            onClick={() => {
+              setSearchQuery(item.regNo);
+              setShowSuggestions(false);
+              handleSearch(item.regNo); // Click karte hi direct search chal jayega
+            }}
+            className="px-5 py-3 hover:bg-indigo-50 cursor-pointer flex justify-between items-center border-b border-slate-100 last:border-b-0"
+          >
+            <div>
+              <p className="font-bold text-slate-800 text-sm">{item.regNo}</p>
+              <p className="text-xs text-slate-500">{item.name}</p>
             </div>
+            <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded-md font-bold">
+              {item.branch || "CSE"}
+            </span>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
 
-            {searchResult && (
-              <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border-2 border-indigo-50 mb-10 animate-in fade-in zoom-in duration-300 relative overflow-hidden">
-                {/* Background Decoration */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -mr-10 -mt-10"></div>
+  <button
+    onClick={() => handleSearch()}
+    className="bg-slate-900 text-white px-8 py-3 rounded-2xl font-bold transition-all active:scale-95 hover:bg-indigo-600"
+  >
+    Find Student
+  </button>
+</div>
 
-                <button
-                  onClick={() => setSearchResult(null)}
-                  className="absolute top-6 right-6 text-slate-300 hover:text-slate-500 transition-colors"
-                >
-                  <X size={24} />
-                </button>
+{/* ERROR MESSAGE IF STUDENT NEVER ATTENDED */}
+{searchError && (
+  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-2xl text-center animate-in fade-in">
+    <p className="text-sm font-bold text-red-600">{searchError}</p>
+    <p className="text-xs text-red-400 mt-1">
+      Sirf wahi students search honge jinhone aapke subjects me attendance lagayi hai.
+    </p>
+  </div>
+)}
+{searchResult && (
+  <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border-2 border-indigo-50 mb-10 animate-in fade-in zoom-in duration-300 relative overflow-hidden">
+    {/* Background Decoration */}
+    <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -mr-10 -mt-10"></div>
 
-                <div className="flex flex-col md:flex-row items-center gap-8">
-                  {/* Student Photo Placeholder */}
-                  <div className="w-32 h-32 rounded-3xl bg-slate-100 flex items-center justify-center border-4 border-white shadow-lg overflow-hidden">
-                    {searchResult.profilePic ? (
-                      <img
-                        src={searchResult.profilePic}
-                        alt="Profile"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <User size={48} className="text-slate-300" />
-                    )}
-                  </div>
+    <button
+      onClick={() => setSearchResult(null)}
+      className="absolute top-6 right-6 text-slate-300 hover:text-slate-500 transition-colors"
+    >
+      <X size={24} />
+    </button>
 
-                  {/* Student Details */}
-                  <div className="flex-1 text-center md:text-left">
-                    <h3 className="text-3xl font-black text-slate-900 mb-1">
-                      {searchResult.name}
-                    </h3>
-                    <p className="text-indigo-600 font-bold tracking-widest text-sm uppercase mb-6">
-                      Student Information
-                    </p>
+    <div className="flex flex-col md:flex-row items-center gap-8">
+      {/* Student Photo Placeholder */}
+      <div className="w-32 h-32 rounded-3xl bg-slate-100 flex items-center justify-center border-4 border-white shadow-lg overflow-hidden">
+        {searchResult.student?.profilePhoto ? (
+          <img
+            src={searchResult.student.profilePhoto}
+            alt="Profile"
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <User size={48} className="text-slate-300" />
+        )}
+      </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1">
-                          Registration Number
-                        </p>
-                        <p className="font-bold text-slate-700">
-                          {searchResult.regNo}
-                        </p>
-                      </div>
-                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1">
-                          Mobile Number
-                        </p>
-                        <p className="font-bold text-slate-700">
-                          {searchResult.mobile || "Not Provided"}
-                        </p>
-                      </div>
-                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1">
-                          Email Address
-                        </p>
-                        <p className="font-bold text-slate-700">
-                          {searchResult.email}
-                        </p>
-                      </div>
-                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1">
-                          Department
-                        </p>
-                        <p className="font-bold text-slate-700">
-                          {searchResult.branch || "CSE"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+      {/* Student Details */}
+      <div className="flex-1 text-center md:text-left">
+        <h3 className="text-3xl font-black text-slate-900 mb-1">
+          {searchResult.student?.name}
+        </h3>
+        <p className="text-indigo-600 font-bold tracking-widest text-sm uppercase mb-6">
+          Student Information • Attended Classes: {searchResult.attendanceCount}
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+            <p className="text-[10px] font-black text-slate-400 uppercase mb-1">
+              Registration Number
+            </p>
+            <p className="font-bold text-slate-700">
+              {searchResult.student?.regNo}
+            </p>
+          </div>
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+            <p className="text-[10px] font-black text-slate-400 uppercase mb-1">
+              Mobile Number
+            </p>
+            <p className="font-bold text-slate-700">
+              {searchResult.student?.mobile || "Not Provided"}
+            </p>
+          </div>
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+            <p className="text-[10px] font-black text-slate-400 uppercase mb-1">
+              Email Address
+            </p>
+            <p className="font-bold text-slate-700">
+              {searchResult.student?.email}
+            </p>
+          </div>
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+            <p className="text-[10px] font-black text-slate-400 uppercase mb-1">
+              Department
+            </p>
+            <p className="font-bold text-slate-700">
+              {searchResult.student?.branch || "CSE"}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* FORM - Spans 4 cols */}

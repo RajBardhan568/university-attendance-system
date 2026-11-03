@@ -290,4 +290,75 @@ router.post("/delete-account", async (req, res) => {
 });
 
 
+// 1. AUTO-SUGGESTIONS ROUTE (Sirf is teacher ki class attend karne wale students)
+router.get('/student-suggestions/:teacherId', async (req, res) => {
+  try {
+    const { teacherId } = req.params;
+    const { query } = req.query; // Jo regNo ya naam teacher type kar raha hai
+
+    if (!query) return res.json([]);
+
+    // Step A: Is teacher ke saare subjects nikaalein
+    const teacherSubjects = await Subject.find({ teacherId }).select('_id');
+    const subjectIds = teacherSubjects.map(sub => sub._id);
+
+    // Step B: Attendance records se un unique students ke regNo nikaalein jinhone in subjects ki class ki hai
+    const attendedRegNos = await Attendance.distinct('regNo', {
+      subjectId: { $in: subjectIds }
+    });
+
+    // Step C: Sirf unhi attended students me se matching regNo ya Name search karein
+    const suggestions = await User.find({
+      role: 'student',
+      regNo: { 
+        $in: attendedRegNos, 
+        $regex: query, 
+        $options: 'i' 
+      }
+    }).select('name regNo branch profilePhoto').limit(6);
+
+    res.json(suggestions);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. SEARCH STUDENT ROUTE (Strict Check: Class attend ki hai ya nahi)
+router.get('/search-student/:teacherId/:regNo', async (req, res) => {
+  try {
+    const { teacherId, regNo } = req.params;
+
+    // Teacher ke subjects nikaalein
+    const teacherSubjects = await Subject.find({ teacherId });
+    const subjectIds = teacherSubjects.map(sub => sub._id);
+
+    // Check karein ki is student ne is teacher ke kisi subject me attendance banayi hai ya nahi
+    const attendanceRecords = await Attendance.find({
+      regNo: regNo,
+      subjectId: { $in: subjectIds }
+    });
+
+    // Agar kabhi attendance nahi lagayi, toh 404 Not Found bhej dein
+    if (!attendanceRecords || attendanceRecords.length === 0) {
+      return res.status(404).json({ 
+        error: "No record found! Is student ne aapki koi bhi class attend nahi ki hai." 
+      });
+    }
+
+    const student = await User.findOne({ regNo, role: 'student' });
+    if (!student) {
+      return res.status(404).json({ error: "Student profile not found." });
+    }
+
+    // Student details aur uski attendance wapas bhejein (apne existing response format ke hisab se adjust kar lein)
+    res.json({
+      student,
+      attendanceCount: attendanceRecords.length,
+      records: attendanceRecords
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
