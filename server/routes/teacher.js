@@ -291,81 +291,89 @@ router.post("/delete-account", async (req, res) => {
 
 
 // 1. AUTO-SUGGESTIONS ROUTE
+// 1. AUTO-SUGGESTIONS ROUTE (Matched with studentReg in AttendanceSchema)
 router.get('/student-suggestions/:teacherId', async (req, res) => {
   try {
     const { teacherId } = req.params;
-    const query = req.query.query ? req.query.query.trim() : "";
+    const { query } = req.query;
 
     if (!query) return res.json([]);
 
+    // Step A: Teacher ke subjects nikaalein
     const teacherSubjects = await Subject.find({ teacherId }).select('_id');
     const subjectIds = teacherSubjects.map(sub => sub._id);
 
-    const attendedRegNos = await Attendance.distinct('regNo', {
+    // Step B: Attendance model me 'studentReg' field se unique registration numbers nikaalein
+    const attendedRegNos = await Attendance.distinct('studentReg', {
       subjectId: { $in: subjectIds }
     });
 
+    // Step C: User model me unhi students ko search karein
     const suggestions = await User.find({
       role: 'student',
       regNo: { 
         $in: attendedRegNos, 
-        $regex: query, 
+        $regex: query.trim(), 
         $options: 'i' 
       }
     }).select('name regNo branch profilePhoto').limit(6);
 
     res.json(suggestions);
   } catch (err) {
-    console.error("Suggestions Error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Failed to fetch student suggestions." });
   }
 });
 
-// 2. SEARCH STUDENT ROUTE (Strict Check with Fallback & Logs)
+// 2. STRICT SEARCH STUDENT ROUTE (Matched with studentReg & Official Error)
 router.get('/search-student/:teacherId/:regNo', async (req, res) => {
   try {
-    const { teacherId } = req.params;
-    const searchRegNo = req.params.regNo ? req.params.regNo.trim() : "";
+    const { teacherId, regNo } = req.params;
+    const cleanRegNo = regNo.trim();
 
-    console.log(`--- SEARCH DEBUG --- Searching for RegNo: "${searchRegNo}" by Teacher: ${teacherId}`);
-
-    // Teacher ke subjects nikaalein
+    // Step A: Teacher ke saare subjects nikaalein
     const teacherSubjects = await Subject.find({ teacherId }).select('_id');
     const subjectIds = teacherSubjects.map(sub => sub._id);
-    console.log("Teacher Subject IDs:", subjectIds);
 
-    // Attendance records check karein (Using case-insensitive regex for robust matching)
+    // Step B: Attendance me 'studentReg' field check karein
     const attendanceRecords = await Attendance.find({
-      regNo: { $regex: new RegExp(`^${searchRegNo}$`, 'i') },
+      studentReg: { $regex: new RegExp(`^${cleanRegNo}$`, 'i') },
       subjectId: { $in: subjectIds }
     });
 
-    console.log("Matched Attendance Records Count:", attendanceRecords.length);
-
+    // Official Institutional Error Message
     if (!attendanceRecords || attendanceRecords.length === 0) {
       return res.status(404).json({ 
-        error: "No record found! Is student ne aapki koi bhi class attend nahi ki hai." 
+        error: "No Attendance Record Found",
+        details: `Student (Reg. No: ${cleanRegNo}) has not attended any classes in your assigned subjects.`
       });
     }
 
-    // Student profile find karein
+    // Step C: Total classes attended calculate karein (using 'count' field from schema)
+    const totalAttendedClasses = attendanceRecords.reduce(
+      (sum, record) => sum + (record.count || 1), 
+      0
+    );
+
+    // Step D: Student profile details fetch karein
     const student = await User.findOne({ 
-      regNo: { $regex: new RegExp(`^${searchRegNo}$`, 'i') }, 
+      regNo: { $regex: new RegExp(`^${cleanRegNo}$`, 'i') }, 
       role: 'student' 
     });
 
     if (!student) {
-      return res.status(404).json({ error: "Student profile not found in database." });
+      return res.status(404).json({ 
+        error: "Student Profile Not Found",
+        details: "Attendance record exists, but no matching student account was found."
+      });
     }
 
     res.json({
       student,
-      attendanceCount: attendanceRecords.length,
+      attendanceCount: totalAttendedClasses,
       records: attendanceRecords
     });
   } catch (err) {
-    console.error("Search Student Error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Unable to retrieve student records at this time." });
   }
 });
 module.exports = router;

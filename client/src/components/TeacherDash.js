@@ -202,12 +202,12 @@ const handleSearch = async (customRegNo) => {
       `https://university-attendance-system-5zq5.vercel.app/api/teacher/search-student/${teacherId}/${queryToSearch}`
     );
     setSearchResult(res.data);
-  } catch (err) {
-    setSearchResult(null);
-    // Backend se aane wala exact appropriate message show karega
-    const errorMsg = err.response?.data?.error || "Student Not Found in your classes";
-    setSearchError(errorMsg);
-  }
+} catch (err) {
+  setSearchResult(null);
+  const title = err.response?.data?.error || "No Attendance Record Found";
+  const details = err.response?.data?.details || "This student has no recorded attendance in your assigned courses.";
+  setSearchError({ title, details });
+}
 };
 
 
@@ -670,12 +670,16 @@ const handleDeleteAccount = async (e) => {
   </button>
 </div>
 
-{/* ERROR MESSAGE IF STUDENT NEVER ATTENDED */}
+{/* OFFICIAL STANDARD ERROR MESSAGE */}
 {searchError && (
-  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-2xl text-center animate-in fade-in">
-    <p className="text-sm font-bold text-red-600">{searchError}</p>
-    <p className="text-xs text-red-400 mt-1">
-      Sirf wahi students search honge jinhone aapke subjects me attendance lagayi hai.
+  <div className="mt-4 p-5 bg-rose-50 border border-rose-200 rounded-2xl text-center shadow-sm animate-in fade-in">
+    <p className="text-sm font-extrabold text-rose-700 uppercase tracking-wide">
+      {typeof searchError === 'object' ? searchError.title : searchError}
+    </p>
+    <p className="text-xs font-medium text-rose-500 mt-1">
+      {typeof searchError === 'object' 
+        ? searchError.details 
+        : "Access Restricted: Only students with verified attendance records in your active subjects can be viewed."}
     </p>
   </div>
 )}
