@@ -62,22 +62,58 @@ const Register = () => {
 const handleInitialSubmit = async (e) => {
   e.preventDefault();
 
-
   let newErrors = { name: "", email: "", mobile: "", regNo: "", photo: "", branch: "" };
   let hasError = false;
 
-  // Strict Validations
-  if (formData.name.length < 3) { newErrors.name = "Name too short (Min 3 letters)"; hasError = true; }
+  // Strict Validations (Blocking emojis and invalid characters)
+  const nameRegex = /^[A-Za-z\s]+$/;
+  const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+  const mobileRegex = /^\d{10}$/;
+  const regNoRegex = /^[A-Za-z0-9]+$/;
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) { newErrors.email = "Invalid email format"; hasError = true; }
+  // 1. Name Validation (No emojis or special symbols)
+  if (!formData.name || formData.name.trim().length < 3) {
+    newErrors.name = "Name too short (Min 3 letters)";
+    hasError = true;
+  } else if (!nameRegex.test(formData.name.trim())) {
+    newErrors.name = "Only letters and spaces allowed (No emojis or symbols)";
+    hasError = true;
+  }
 
-  if (formData.mobile.length !== 10) { newErrors.mobile = "Must be exactly 10 digits"; hasError = true; }
+  // 2. Email Validation (Strict format, no emojis)
+  if (!emailRegex.test(formData.email.trim())) {
+    newErrors.email = "Invalid email format";
+    hasError = true;
+  }
 
-  if (role === "student" && !formData.regNo) { newErrors.regNo = "Registration number required"; hasError = true; }
+  // 3. Mobile Validation (Strictly 10 numeric digits)
+  if (!mobileRegex.test(formData.mobile.trim())) {
+    newErrors.mobile = "Must be exactly 10 digits (Numbers only)";
+    hasError = true;
+  }
 
-  if (role === "student" && !formData.branch) { newErrors.branch = "Branch required"; hasError = true; }
+  // 4. Registration Number Validation (Student only, alphanumeric)
+  if (role === "student") {
+    if (!formData.regNo || !formData.regNo.trim()) {
+      newErrors.regNo = "Registration number required";
+      hasError = true;
+    } else if (!regNoRegex.test(formData.regNo.trim())) {
+      newErrors.regNo = "Only letters and numbers allowed";
+      hasError = true;
+    }
+  }
 
-  if (role === "student" && !file) { newErrors.photo = "ID Photo is required"; hasError = true; }
+  // 5. Branch Validation (Student only)
+  if (role === "student" && !formData.branch) {
+    newErrors.branch = "Branch required";
+    hasError = true;
+  }
+
+  // 6. Photo Validation (Student only)
+  if (role === "student" && !file) {
+    newErrors.photo = "ID Photo is required";
+    hasError = true;
+  }
 
   if (hasError) {
     setErrors(newErrors);
@@ -162,7 +198,7 @@ setTimeout(() => navigate("/login"), 3000);
           <>
             <div className="text-center mb-8">
               <h2 className="text-3xl font-black text-slate-800 tracking-tight">Create Account</h2>
-              <p className="text-slate-400 font-bold text-sm mt-2 uppercase tracking-widest">Join Attendance.io</p>
+              <p className="text-slate-400 font-bold text-sm mt-2 uppercase tracking-widest">Join AMS</p>
             </div>
 
             <div className="flex bg-slate-100 p-1.5 rounded-2xl mb-8">

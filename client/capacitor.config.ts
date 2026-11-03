@@ -6,13 +6,10 @@ const config: CapacitorConfig = {
   webDir: 'build',
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000, // 2 seconds tak splash screen dikhegi
+      launchShowDuration: 0,
       launchAutoHide: true,
-      backgroundColor: "#4f46e5", // Aapka Indigo theme color
-      androidSplashResourceName: "splash",
-      androidScaleType: "CENTER_CROP",
-      showSpinner: true,
-      spinnerColor: "#ffffff"
+      backgroundColor: "#ffffff",
+      showSpinner: false,
     }
   }
 };

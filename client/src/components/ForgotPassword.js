@@ -150,7 +150,7 @@ const ForgotPassword = () => {
                 value={email}
                 disabled={loading}
                 className="w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-700 disabled:opacity-60"
-                placeholder="university-email@domain.com"
+                placeholder="email@domain.com"
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />

@@ -7,6 +7,8 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
+import { App as CapacitorApp } from "@capacitor/app";
+import { Preferences } from '@capacitor/preferences';
 import * as XLSX from "xlsx"; // Import this at the top
 import {
   Trash2,
@@ -55,7 +57,7 @@ const Timer = ({ expiresAt }) => {
   );
 };
 
-const TeacherDash = ({ teacherId }) => {
+const TeacherDash = ({ teacherId, initialUser }) => {
   const [view, setView] = useState("dashboard");
   const [subjects, setSubjects] = useState([]);
   const [subjectForm, setSubjectForm] = useState({
@@ -70,9 +72,7 @@ const TeacherDash = ({ teacherId }) => {
   const [generatingMap, setGeneratingMap] = useState({});
   // Profile Edit States
   const [isEditing, setIsEditing] = useState(false);
-  const [user, setUser] = useState(
-    JSON.parse(localStorage.getItem("user")) || {},
-  );
+  const [user, setUser] = useState(initialUser || {});
   const [todayCounts, setTodayCounts] = useState({});
   const [selectedRange, setSelectedRange] = useState(() => {
     const saved = localStorage.getItem('teacherSelectedRange');
@@ -104,6 +104,21 @@ const TeacherDash = ({ teacherId }) => {
     }
   };
 
+  // Sync user from Capacitor Preferences on mount
+  useEffect(() => {
+    const loadTeacherFromPreferences = async () => {
+      try {
+        const { value } = await Preferences.get({ key: "user" });
+        if (value) {
+          setUser(JSON.parse(value));
+        }
+      } catch (err) {
+        console.error("Failed to load user from Preferences:", err);
+      }
+    };
+    loadTeacherFromPreferences();
+  }, []);
+
   useEffect(() => {
     fetchSubjects();
 
@@ -114,6 +129,26 @@ const TeacherDash = ({ teacherId }) => {
 
     return () => clearInterval(interval);
   }, [teacherId, subjects.length]);
+
+  // Handle hardware back button inside Student Dashboard
+useEffect(() => {
+  const backListener = CapacitorApp.addListener("backButton", () => {
+    if (isEditing) {
+      // If editing profile, close edit mode first
+      setIsEditing(false);
+    } else if (view !== "dashboard") {
+      // If on My Profile tab, go back to main Attendance/Dashboard tab
+      setView("dashboard");
+    } else {
+      // If already on main Dashboard tab, exit the app
+      CapacitorApp.exitApp();
+    }
+  });
+
+  return () => {
+    backListener.then((handler) => handler.remove());
+  };
+}, [view, isEditing]);
 
   const handleSearch = async () => {
     if (!searchQuery) return;
@@ -128,20 +163,16 @@ const TeacherDash = ({ teacherId }) => {
     }
   };
 
-  const handleLogout = () => {
-    // Pop up a confirmation dialog box
-    const isConfirmed = window.confirm("Are you sure you want to logout?");
+const handleLogout = async () => {
+  const isConfirmed = window.confirm("Are you sure you want to logout?");
 
-    // If the user clicks "OK", clear data and redirect
-    if (isConfirmed) {
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
-      localStorage.removeItem("isLoggedIn");
-      // If you are using React Router use: navigate("/login");
-      window.location.href = "/login";
-    }
-    // If they click "Cancel", nothing happens and they stay logged in
-  };
+  if (isConfirmed) {
+    await Preferences.remove({ key: "user" });
+    await Preferences.remove({ key: "token" });
+    await Preferences.remove({ key: "isLoggedIn" });
+    window.location.hash = "#/login";
+  }
+};
 
   // Simplified Update for Teacher (Name + Mobile Only)
   const handleUpdateProfile = async () => {
@@ -452,7 +483,7 @@ const TeacherDash = ({ teacherId }) => {
             <div className="bg-indigo-600 p-2 rounded-xl text-white">
               <LayoutDashboard size={24} />
             </div>
-            <h1 className="text-xl font-black text-slate-900">Attendance.io</h1>
+            <h1 className="text-xl font-black text-slate-900">Teacher Portal</h1>
           </div>
           <div className="flex items-center gap-4 md:gap-8 font-bold text-sm">
             <button

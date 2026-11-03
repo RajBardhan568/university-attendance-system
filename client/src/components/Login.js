@@ -22,53 +22,56 @@ const Login = () => {
   };
 
 const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const res = await axios.post(
-        "https://university-attendance-system-5zq5.vercel.app/api/auth/login",
-        formData,
-      );
-// for Capacitor Preferences storage
- Preferences.set({
+  e.preventDefault();
+  setLoading(true);
+  
+  try {
+    // 1. API request to authenticate user
+    const res = await axios.post(
+      "https://university-attendance-system-5zq5.vercel.app/api/auth/login",
+      formData,
+    );
+
+    // 2. Save user session securely using Capacitor Preferences with await
+    await Preferences.set({
       key: 'user',
       value: JSON.stringify(res.data.user),
     });
+    console.log("User data successfully saved in Preferences.");
 
     if (res.data.token) {
-       Preferences.set({
+      await Preferences.set({
         key: 'token',
         value: res.data.token,
       });
     }
-    
-    Preferences.set({
+
+    await Preferences.set({
       key: 'isLoggedIn',
       value: 'true',
     });
 
-
-
-//       // Navigate based on role
-      const userRole = res.data.user.role;
-      if (userRole === "teacher") {
-        navigate("/teacher-dashboard", { replace: true });
-      } else {
-        navigate("/student-dashboard", { replace: true });
-      }
-
-    } catch (err) {
-      if (err.response?.status === 403) {
-        alert("Account not verified. Redirecting to verification...");
-        navigate("/verify-account", { state: { email: formData.email } });
-      } else {
-        alert(err.response?.data?.error || "Login failed");
-      }
-    } finally {
-      setLoading(false);
+    // 3. Navigate based on role once storage write is complete
+    const userRole = res.data.user.role;
+    if (userRole === "teacher") {
+      navigate("/teacher-dashboard", { replace: true });
+    } else {
+      navigate("/student-dashboard", { replace: true });
     }
-  };
 
+  } catch (err) {
+    // Handle API errors or verification status
+    if (err.response?.status === 403) {
+      alert("Account not verified. Redirecting to verification...");
+      navigate("/verify-account", { state: { email: formData.email } });
+    } else {
+      console.error("Login or storage error:", err);
+      alert(err.response?.data?.error || "Login failed");
+    }
+  } finally {
+    setLoading(false);
+  }
+};
   return (
     <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6 font-sans">
       {/* Main Card Container */}

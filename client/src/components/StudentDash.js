@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Geolocation } from '@capacitor/geolocation';
 import { Preferences } from '@capacitor/preferences';
+import { App as CapacitorApp } from "@capacitor/app";
 import {
   CheckCircle,
   AlertCircle,
@@ -17,7 +18,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-const StudentDash = () => {
+
+const StudentDash = ({ initialUser }) => {
   // --- 1. STATES ---
   const [view, setView] = useState("dashboard"); // dashboard or profile
   const [attendanceData, setAttendanceData] = useState([]);
@@ -26,11 +28,45 @@ const StudentDash = () => {
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isMarking, setIsMarking] = useState(false);
-  // User State
-  const [user, setUser] = useState(
-    JSON.parse(localStorage.getItem("user")) || {},
-  );
+
+  // User State initialized from App.js prop
+  const [user, setUser] = useState(initialUser || {});
   const regNo = user?.regNo;
+
+  // Sync user state with Capacitor Preferences on mount
+  useEffect(() => {
+    const loadUserFromPreferences = async () => {
+      try {
+        const { value } = await Preferences.get({ key: "user" });
+        if (value) {
+          setUser(JSON.parse(value));
+        }
+      } catch (err) {
+        console.error("Failed to load user from Preferences:", err);
+      }
+    };
+    loadUserFromPreferences();
+  }, []);
+
+// Handle hardware back button inside Student Dashboard
+useEffect(() => {
+  const backListener = CapacitorApp.addListener("backButton", () => {
+    if (isEditing) {
+      // If editing profile, close edit mode first
+      setIsEditing(false);
+    } else if (view !== "dashboard") {
+      // If on My Profile tab, go back to main Attendance/Dashboard tab
+      setView("dashboard");
+    } else {
+      // If already on main Dashboard tab, exit the app
+      CapacitorApp.exitApp();
+    }
+  });
+
+  return () => {
+    backListener.then((handler) => handler.remove());
+  };
+}, [view, isEditing]);
 
   // --- 2. DATA FETCHING ---
   const fetchMyAttendance = async () => {
@@ -61,7 +97,7 @@ const StudentDash = () => {
     );
 
     try {
-      // 1. Pehle native/browser location permissions request karein
+     // 1. Request native/browser location permissions
       const permissions = await Geolocation.requestPermissions();
 
       if (permissions.location !== 'granted' && permissions.location !== 'limited') {
@@ -70,7 +106,7 @@ const StudentDash = () => {
         return;
       }
 
-      // 2. Location coordinates fetch karein
+      // 2. Fetch current location coordinates
       const position = await Geolocation.getCurrentPosition({
         enableHighAccuracy: true,
         timeout: 10000,
@@ -79,7 +115,7 @@ const StudentDash = () => {
 
       const { latitude, longitude } = position.coords;
 
-      // 3. Server par attendance request bhejein
+      // 3. Send attendance request to the server
       const res = await axios.post(
         "https://university-attendance-system-5zq5.vercel.app/api/student/mark-attendance",
         {
@@ -155,10 +191,15 @@ const StudentDash = () => {
 
       // 3. Sync everything
       setUser(res.data.user);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+      await Preferences.set({
+        key: "user",
+        value: JSON.stringify(res.data.user),
+      });
       setIsEditing(false);
       setSelectedFile(null);
+
       alert("Student Profile Updated!");
+
     } catch (err) {
       console.error("Student Update Error:", err.response?.data || err.message);
       alert(err.response?.data?.error || "Update failed.");
@@ -176,7 +217,7 @@ const handleLogout = async () => {
     await Preferences.remove({ key: 'token' });
     await Preferences.remove({ key: 'isLoggedIn' });
     // If you are using React Router use: navigate("/login");
-    window.location.href = "/login"; 
+    window.location.href = "#/login"; 
   }
   // If they click "Cancel", nothing happens and they stay logged in
 };
@@ -201,7 +242,7 @@ const handleLogout = async () => {
                 view === "dashboard" ? "text-indigo-600" : "text-slate-400"
               }
             >
-              Attendance
+              Dashboard
             </button>
             <button
               onClick={() => setView("profile")}
